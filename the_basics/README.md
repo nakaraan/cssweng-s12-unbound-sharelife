@@ -7,5 +7,13 @@
 
 ## How to Run Project Files:
 1. Open a Powershell terminal to 'the_basics' dir
-2. Run the program using this command
+2. Run the program using this command:
     `flutter run -d chrome`
+
+## Running Individual Files (for testing)
+1. Add this at the end of very end of the file:
+    `void main() {
+        runApp(const MaterialApp(home: EncoderDashb()));
+    }`
+2. Run the file using this command. Change the dir as needed.
+    `flutter run -t lib/encoder_dashb.dart`
