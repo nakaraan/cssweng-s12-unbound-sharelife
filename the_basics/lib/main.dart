@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:the_basics/mem_dashb.dart';
+import 'package:the_basics/features/member/mem_dashb.dart';
 
 void main() {
   runApp(const MainApp());

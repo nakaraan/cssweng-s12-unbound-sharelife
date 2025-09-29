@@ -48,24 +48,6 @@ class SideMenu extends StatelessWidget {
 
       case "Encoder":
         return [
-          const DrawerHeader(
-            child: Text("Encoder Panel", style: TextStyle(fontSize: 20)),
-          ),
-          ListTile(
-            leading: const Icon(Icons.upload_file),
-            title: const Text("Encode Loans"),
-            onTap: () {},
-          ),
-          ListTile(
-            leading: const Icon(Icons.history),
-            title: const Text("Loan Records"),
-            onTap: () {},
-          ),
-        ];
-
-      case "Member":
-      default:
-        return [
           Container(
             height: 80,
             decoration: const BoxDecoration(
@@ -77,14 +59,14 @@ class SideMenu extends StatelessWidget {
             child: const Row(
               children: [
                 Padding(
-                  padding: EdgeInsets.only(left: 10),
+                  padding: EdgeInsets.only(left: 20),
                   child: Icon(Icons.menu),
                 ),
                 SizedBox(width: 8),
                 Text(
-                  "Member",
+                  "Encoder",
                   style: TextStyle(
-                    fontSize: 30,
+                    fontSize: 25,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -92,6 +74,38 @@ class SideMenu extends StatelessWidget {
             ),
           ),
           SizedBox(height: 10),
+          ListTile(
+            leading: Image.asset(
+                    'assets/icons/loan_icon.png',
+                    width: 24,
+                    height: 24,
+                  ),
+            title: const Text("Dashboard"),
+            onTap: () {},
+          ),
+          SizedBox(height: 10),
+          ListTile(
+            leading: const Icon(CupertinoIcons.pencil),
+            title: const Text("Loan Applications"),
+            onTap: () {},
+          ),
+          SizedBox(height: 10),
+          ListTile(
+            leading: const Icon(Icons.receipt_long),
+            title: const Text("Record Installments"),
+            onTap: () {},
+          ),
+          SizedBox(height: 10),
+          ListTile(
+            leading: const Icon(Icons.file_present),
+            title: const Text("Member Info"),
+            onTap: () {},
+          )
+        ];
+
+      case "Member":
+      default:
+        return [
           ListTile(
             leading: Image.asset(
                     'assets/icons/loan_icon.png',
