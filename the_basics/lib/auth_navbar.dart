@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:the_basics/login.dart';
+import 'package:the_basics/register.dart';
 
 class AuthNavBar extends StatelessWidget {
   const AuthNavBar({super.key});
@@ -29,7 +31,13 @@ class AuthNavBar extends StatelessWidget {
           ),
           const Spacer(),
           TextButton(
-            onPressed: () {},
+            onPressed: () {
+              // Navigate to login page
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => LoginPage()),
+              );
+            },
             child: const Text(
               'Login',
               style: TextStyle(
@@ -40,7 +48,13 @@ class AuthNavBar extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           ElevatedButton(
-            onPressed: () {},
+            onPressed: () {
+              // Navigate to register page
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => RegisterPage()),
+              );
+            },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF0C0C0D),
               foregroundColor: Colors.white,
