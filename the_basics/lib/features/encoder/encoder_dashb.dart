@@ -9,7 +9,29 @@ class EncoderDashb extends StatefulWidget {
   State<EncoderDashb> createState() => _EncoderDashbState();
 }
 
-class _EncoderDashbState extends State<EncoderDashb> {
+class _MemDBState extends State<MemDB> {
+  int? sortColumnIndex;
+  bool isAscending = true;
+
+  List<Map<String, dynamic>> loans = loansData;
+
+  void onSort(int columnIndex, bool ascending) {
+    setState(() {
+      sortColumnIndex = columnIndex;
+      isAscending = ascending;
+
+      switch (columnIndex) {
+        case 0:
+          loans.sort((a, b) => ascending
+              ? a["ref"].compareTo(b["ref"])
+              : b["ref"].compareTo(a["ref"]));
+          break;
+        default: 
+          break;
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(

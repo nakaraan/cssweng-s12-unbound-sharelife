@@ -32,10 +32,15 @@ class AuthNavBar extends StatelessWidget {
           const Spacer(),
           TextButton(
             onPressed: () {
-              // Navigate to login page
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => LoginPage()),
+              Navigator.of(context).pushReplacement(
+                PageRouteBuilder(
+                  pageBuilder: (context, animation, secondaryAnimation) => LoginPage(),
+                  transitionDuration: const Duration(milliseconds: 150),
+                  reverseTransitionDuration: const Duration(milliseconds: 150),
+                  transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                    return FadeTransition(opacity: animation, child: child);
+                  },
+                )
               );
             },
             child: const Text(
@@ -49,10 +54,15 @@ class AuthNavBar extends StatelessWidget {
           const SizedBox(width: 8),
           ElevatedButton(
             onPressed: () {
-              // Navigate to register page
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => RegisterPage()),
+              Navigator.of(context).pushReplacement(
+                PageRouteBuilder(
+                  pageBuilder: (context, animation, secondaryAnimation) => RegisterPage(),
+                  transitionDuration: const Duration(milliseconds: 150),
+                  reverseTransitionDuration: const Duration(milliseconds: 150),
+                  transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                    return FadeTransition(opacity: animation, child: child);
+                  },
+                )
               );
             },
             style: ElevatedButton.styleFrom(
