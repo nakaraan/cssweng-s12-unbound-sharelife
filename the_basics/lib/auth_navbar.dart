@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:the_basics/login.dart';
+import 'package:the_basics/register.dart';
 
 class AuthNavBar extends StatelessWidget {
   const AuthNavBar({super.key});
@@ -29,7 +31,18 @@ class AuthNavBar extends StatelessWidget {
           ),
           const Spacer(),
           TextButton(
-            onPressed: () {},
+            onPressed: () {
+              Navigator.of(context).pushReplacement(
+                PageRouteBuilder(
+                  pageBuilder: (context, animation, secondaryAnimation) => LoginPage(),
+                  transitionDuration: const Duration(milliseconds: 150),
+                  reverseTransitionDuration: const Duration(milliseconds: 150),
+                  transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                    return FadeTransition(opacity: animation, child: child);
+                  },
+                )
+              );
+            },
             child: const Text(
               'Login',
               style: TextStyle(
@@ -40,7 +53,18 @@ class AuthNavBar extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           ElevatedButton(
-            onPressed: () {},
+            onPressed: () {
+              Navigator.of(context).pushReplacement(
+                PageRouteBuilder(
+                  pageBuilder: (context, animation, secondaryAnimation) => RegisterPage(),
+                  transitionDuration: const Duration(milliseconds: 150),
+                  reverseTransitionDuration: const Duration(milliseconds: 150),
+                  transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                    return FadeTransition(opacity: animation, child: child);
+                  },
+                )
+              );
+            },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF0C0C0D),
               foregroundColor: Colors.white,
