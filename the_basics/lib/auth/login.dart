@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:the_basics/auth_navbar.dart';
+import 'package:the_basics/widgets/auth_navbar.dart';
 
 class LoginPage extends StatelessWidget {
   const LoginPage({super.key});
@@ -56,7 +56,7 @@ class LoginPage extends StatelessWidget {
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(
-                  onPressed: () {},
+                  onPressed: () {}, // No forgot password page yet
                   style: TextButton.styleFrom(
                     padding: EdgeInsets.zero,
                     minimumSize: const Size(0, 0),

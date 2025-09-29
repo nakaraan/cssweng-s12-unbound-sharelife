@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-class TopNavBar extends StatelessWidget{
+class TopNavBar extends StatelessWidget {
   const TopNavBar({super.key});
 
   @override
@@ -10,21 +10,23 @@ class TopNavBar extends StatelessWidget{
       padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
         color: Colors.white,
-        border: const Border(
-          bottom: BorderSide(
-            color: Colors.grey, 
-            width: 1.0
-          )
-        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.5),
+            spreadRadius: 0,
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         children: const [
-          SideMenuBtn(),  // opens sidebar
-          Spacer(),       // pushes menu options to the right
-          MenuOptions(),  // opens menu options
+          SideMenuBtn(),
+          Spacer(),
+          MenuOptions(),
           ProfileBtn(),
-        ]
-      ),    
+        ],
+      ),
     );
   }
 }
@@ -68,25 +70,28 @@ class  MenuOptions extends StatelessWidget{
 }
 
 class ProfileBtn extends StatelessWidget {
-
-  const ProfileBtn({
-    super.key,
-  });
+  const ProfileBtn({super.key});
 
   @override
   Widget build(BuildContext context) {
     return PopupMenuButton(
+      offset: const Offset(0, 40),
       itemBuilder: (context) => [
         const PopupMenuItem(
-          child: Text("Profile Settings"),
+          padding: EdgeInsets.symmetric(vertical: 8, horizontal: 5),
+          child: Center(
+            child: Text("Profile Settings"),
+          ),
         ),
         PopupMenuItem(
-          child: Container(
-            color: Colors.red,
-            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-            child: const Text(
-              "Log Out",
-              style: TextStyle(color: Colors.white),
+          padding: EdgeInsets.zero,
+          child: Center(
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 5),
+              child: const Text(
+                "Log Out",
+                style: TextStyle(color: Colors.red),
+              ),
             ),
           ),
         ),

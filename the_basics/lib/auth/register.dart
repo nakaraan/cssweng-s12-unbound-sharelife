@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:the_basics/auth_navbar.dart';
+import 'package:the_basics/widgets/auth_navbar.dart';
 
 class RegisterPage extends StatelessWidget {
   const RegisterPage({super.key});
