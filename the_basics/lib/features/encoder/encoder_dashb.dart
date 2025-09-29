@@ -27,7 +27,11 @@ class _MemDBState extends State<MemDB> {
               ? a["ref"].compareTo(b["ref"])
               : b["ref"].compareTo(a["ref"]));
           break;
-        case 1:
+        default: 
+          break;
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {

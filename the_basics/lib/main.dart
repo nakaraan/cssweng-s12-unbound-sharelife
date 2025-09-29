@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:the_basics/login.dart';
-import 'package:the_basics/mem_dashb.dart';
-import 'package:the_basics/register.dart';
+import 'package:the_basics/auth/login.dart';
+import 'package:the_basics/features/member/mem_dashb.dart';
+import 'package:the_basics/auth/register.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 

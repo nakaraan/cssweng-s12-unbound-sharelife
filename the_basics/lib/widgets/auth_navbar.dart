@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:the_basics/login.dart';
-import 'package:the_basics/register.dart';
+import 'package:the_basics/auth/login.dart';
+import 'package:the_basics/auth/register.dart';
 
 class AuthNavBar extends StatelessWidget {
   const AuthNavBar({super.key});
