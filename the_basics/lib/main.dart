@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:the_basics/mem_dashb.dart';
 
 void main() {
   runApp(const MainApp());
@@ -11,14 +12,7 @@ class MainApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      home: Scaffold(
-        appBar: AppBar(
-          title: const Text('The Basics'),
-        ),
-        body: const Center(
-          child: Text('Hello, Flutter!'),
-        ),
-      ),
+      home: MemDB()
     );
   }
 }
