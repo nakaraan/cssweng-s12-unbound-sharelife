@@ -12,7 +12,7 @@ class MainApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      home: MemDB()
+      home: MemDB()   // change this depending on what page u wanna test / check layout
     );
   }
 }

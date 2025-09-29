@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 
 class SideMenu extends StatelessWidget {
-  final String role; // "Member", "Admin", "Encoder"
+  final String role; // member, admin, encoder
 
   const SideMenu({super.key, required this.role});
 

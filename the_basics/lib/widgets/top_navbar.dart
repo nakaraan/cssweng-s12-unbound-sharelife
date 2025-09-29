@@ -15,7 +15,7 @@ class TopNavBar extends StatelessWidget {
             color: Colors.grey.withOpacity(0.5),
             spreadRadius: 0,
             blurRadius: 4,
-            offset: const Offset(0, 2), // shadow towards bottom
+            offset: const Offset(0, 2),
           ),
         ],
       ),

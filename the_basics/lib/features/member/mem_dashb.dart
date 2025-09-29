@@ -79,18 +79,19 @@ class _MemDBState extends State<MemDB> {
       backgroundColor: const Color(0xFFEFEFEF),
       body: Column(
         children: [
-          // Top navigation bar
+          // top nav bar
           const TopNavBar(),
 
-          // Main area: Sidebar + content
+          // main area
           Expanded(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Sidebar
+
+                // sidebar
                 const SideMenu(role: "Member"),
 
-                // Main content
+                // main content
                 Expanded(
                   child: Container(
                     margin: const EdgeInsets.only(left: 16),
@@ -100,7 +101,8 @@ class _MemDBState extends State<MemDB> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          // 1. Title
+
+                          // title
                           const Text(
                             "Your Loans",
                             style: TextStyle(
@@ -110,10 +112,11 @@ class _MemDBState extends State<MemDB> {
                           ),
                           const SizedBox(height: 24),
 
-                          // 2. Filter row: Start/End + Search + Download
+                          // filter row
                           Row(
                             children: [
-                              // Start Date
+
+                              // start date
                               SizedBox(
                                 width: 120,
                                 height: buttonHeight,
@@ -138,7 +141,7 @@ class _MemDBState extends State<MemDB> {
                               ),
                               const SizedBox(width: 16),
 
-                              // End Date
+                              // end date
                               SizedBox(
                                 width: 120,
                                 height: buttonHeight,
@@ -163,7 +166,7 @@ class _MemDBState extends State<MemDB> {
                               ),
                               const SizedBox(width: 16),
 
-                              // Search
+                              // search
                               SizedBox(
                                 height: buttonHeight,
                                 child: ElevatedButton(
@@ -182,7 +185,7 @@ class _MemDBState extends State<MemDB> {
                               
                               Spacer(),
 
-                              // Download
+                              // download btn
                               SizedBox(
                                 height: buttonHeight,
                                 child: ElevatedButton.icon(
@@ -205,7 +208,7 @@ class _MemDBState extends State<MemDB> {
                           ),
                           const SizedBox(height: 24),
 
-                          // 3. Breakdown (two boxes)
+                          // summary cards
                           Row(
                             children: [
                               Expanded(
@@ -263,7 +266,7 @@ class _MemDBState extends State<MemDB> {
                           ),
                           const SizedBox(height: 24),
 
-                          // 4. Table
+                          // amortization table
                           Expanded(
                             child: Container(
                               padding: const EdgeInsets.all(16),
