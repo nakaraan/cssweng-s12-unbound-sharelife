@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:the_basics/features/member/mem_dashb.dart';
+import 'package:the_basics/features/encoder/encoder_dashb.dart';
 
 void main() {
   runApp(const MainApp());
@@ -12,7 +12,7 @@ class MainApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      home: MemDB()   // change this depending on what page u wanna test / check layout
+      home: EncoderDashb()   // change depending page to test
     );
   }
 }
