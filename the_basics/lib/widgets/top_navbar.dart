@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:the_basics/auth/auth_service.dart';
+import 'package:the_basics/auth/login.dart';
 
 class TopNavBar extends StatefulWidget {
   const TopNavBar({super.key});
@@ -101,6 +102,8 @@ class _ProfileBtnState extends State<ProfileBtn> {
   // logout button
   void logout() async {
     await authService.signOut();
+    //Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+    Navigator.pushReplacementNamed(context, '/login');
   }
 
   @override

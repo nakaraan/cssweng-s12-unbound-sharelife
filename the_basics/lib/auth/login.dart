@@ -26,6 +26,7 @@ class _LoginPageState extends State<LoginPage> {
     // attempt login...
     try {
       await authService.signInWithEmailPassword(email, password);
+      Navigator.pushReplacementNamed(context, '/home');
     } catch (e) {
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text("Error: $e")));

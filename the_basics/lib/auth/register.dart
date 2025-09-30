@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:the_basics/auth/auth_service.dart';
+import 'package:the_basics/auth/login.dart';
 import 'package:the_basics/widgets/auth_navbar.dart';
 
 class RegisterPage extends StatefulWidget {
@@ -41,113 +42,8 @@ class _RegisterPageState extends State<RegisterPage> {
     _confirmPasswordController.dispose();
     super.dispose();
   }
-/*
-  // sign up button pressed
-  void signUp() async {
-    // prepare data
-    // final username = _usernameController.text.trim();
-    final email = _emailController.text.trim();
-    final password = _passwordController.text;
-    final confirmPassword = _confirmPasswordController.text;
-/*
-  // validate username: non-empty, 3-30 chars, allowed: letters
-  final usernameRegex = RegExp(r'^[a-zA-Z0-9._-]{3,30}$');
-  if (username.isEmpty || !usernameRegex.hasMatch(username)) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-          'Invalid username. Use 3-30 characters: letters, numbers, ., _, -',
-        ),
-      ),
-    );
-    return;
-  }
-*/
-  //check if the passwords match
-  if (password != confirmPassword) {
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Passwords don't match")));
-    return;
-  }
 
-  // check if password fits supabase requirements
-  if (password.length < 6) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Password must be at least 6 characters")),
-    );
-    return;
-  }
-/*
-  //attempt sign up..
-  try {
-    // Test connection first
-    print('Testing connection before registration...');
-    final connectionOk = await authService.testConnection();
-    if (!connectionOk) {
-      throw Exception('Cannot connect to Supabase server. Please check your internet connection.');
-    }
-
-    // Use the complete registration method with dummy data for now
-    await authService.completeUserRegistration(
-      email: email,
-      password: password,
-      username: username,
-      firstName: 'Test', // You can add text fields for these later
-      lastName: 'User',
-      dateOfBirth: DateTime(1990, 1, 1), // Default date
-      contactNumber: '1234567890', // Default number
-    );
-
-    // Show success message
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Registration successful!")),
-      );
-      Navigator.pop(context);
-    }
-  } catch (e) {
-    if (mounted) {
-      // Print detailed error to console
-      print('Registration error: $e');
-      print('Error type: ${e.runtimeType}');
-      
-      // Show detailed error in a dialog
-      showDialog(
-        context: context,
-        builder: (_) => AlertDialog(
-          title: const Text('Registration Error'),
-          content: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text('Error details:', style: TextStyle(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                Text('$e'),
-                const SizedBox(height: 16),
-                const Text('Check the console for more details.'),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('OK'),
-            ),
-          ],
-        ),
-      );
-      
-      // Also show a snackbar for quick reference
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Registration failed: ${e.toString().substring(0, 100)}...")),
-      );
-    }
-  } 
-              */
-
-  }
-  */
-
+  // Sign up button pressed
   void signUp() async {
     // prepare data
     final email = _emailController.text;
@@ -165,9 +61,20 @@ class _RegisterPageState extends State<RegisterPage> {
     // attempt sign up...
     try {
       await authService.signUpWithEmailPassword(email, password);
+      ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text("Please check your email to confirm your registration.")));
 
       if (mounted) {
-        Navigator.pop(context);
+        Navigator.of(context).pushReplacement(
+          PageRouteBuilder(
+            pageBuilder: (context, animation, secondaryAnimation) => LoginPage(),
+            transitionDuration: const Duration(milliseconds: 150),
+            reverseTransitionDuration: const Duration(milliseconds: 150),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return FadeTransition(opacity: animation, child: child);
+            },
+          )
+        );
       }
       
     } catch (e) {
@@ -177,6 +84,7 @@ class _RegisterPageState extends State<RegisterPage> {
         return;
       }
     }
+    
   }
 
   @override
