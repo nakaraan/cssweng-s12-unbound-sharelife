@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:the_basics/widgets/top_navbar.dart';
 import 'package:the_basics/widgets/side_menu.dart';
 
-class EncoderDashb extends StatelessWidget {
-  const EncoderDashb({super.key});
+class EncoderDashboard extends StatelessWidget {
+  const EncoderDashboard({super.key});
 
   @override
   Widget build(BuildContext context) {

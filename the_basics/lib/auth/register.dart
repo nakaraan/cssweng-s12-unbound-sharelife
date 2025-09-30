@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:the_basics/auth/auth_service.dart';
 import 'package:the_basics/auth/login.dart';
 import 'package:the_basics/widgets/auth_navbar.dart';
@@ -43,48 +44,92 @@ class _RegisterPageState extends State<RegisterPage> {
     super.dispose();
   }
 
-  // Sign up button pressed
   void signUp() async {
-    // prepare data
-    final email = _emailController.text;
+    final email = _emailController.text.trim().toLowerCase();
     final password = _passwordController.text;
     final confirmPassword = _confirmPasswordController.text;
 
-
-    // check that passwords match
     if (password != confirmPassword) {
       ScaffoldMessenger.of(context)
         .showSnackBar(const SnackBar(content: Text("Passwords don't match")));
       return;
     }
 
-    // attempt sign up...
+    // Add this check BEFORE attempting signup
     try {
-      await authService.signUpWithEmailPassword(email, password);
-      ScaffoldMessenger.of(context)
-        .showSnackBar(const SnackBar(content: Text("Please check your email to confirm your registration.")));
-
-      if (mounted) {
-        Navigator.of(context).pushReplacement(
-          PageRouteBuilder(
-            pageBuilder: (context, animation, secondaryAnimation) => LoginPage(),
-            transitionDuration: const Duration(milliseconds: 150),
-            reverseTransitionDuration: const Duration(milliseconds: 150),
-            transitionsBuilder: (context, animation, secondaryAnimation, child) {
-              return FadeTransition(opacity: animation, child: child);
-            },
-          )
+      final userExists = await authService.checkUserExists(email);
+      if (userExists) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("User with this email already exists."))
         );
+        return; // Stop here if user exists
       }
-      
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text("Error: $e")));
+      debugPrint('Error checking user existence: $e');
+      // Continue with signup attempt even if check fails
+    }
+
+    try {
+      // Using the AuthService method which returns AuthResponse from gotrue.
+      final response = await authService.signUpWithEmailPassword(email, password);
+
+      // On success, response.user will be non-null (or response.session depending on signup flow)
+      if (response.user != null || response.session != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Please check your email to confirm your registration."))
+        );
+        if (mounted) {
+          Navigator.of(context).pushReplacement(
+            PageRouteBuilder(
+              pageBuilder: (context, animation, secondaryAnimation) => LoginPage(),
+              transitionDuration: const Duration(milliseconds: 150),
+              reverseTransitionDuration: const Duration(milliseconds: 150),
+              transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                return FadeTransition(opacity: animation, child: child);
+              },
+            )
+          );
+        }
         return;
       }
+
+      // If no user/session, try to inspect response for an error message (some SDK variants include `error` differently)
+      // Many versions return a Map-like `rawResponse` or throw an exception instead. So fall back to generic message:
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Sign up did not complete. Please try again."))
+      );
+    } on AuthException catch (authError) {
+      // supabase_flutter may throw AuthException / GotrueError with a message
+      final errMsg = authError.message?.toLowerCase() ?? '';
+      if (errMsg.contains('already registered') ||
+          errMsg.contains('already exists') ||
+          errMsg.contains('user already registered') ||
+          (errMsg.contains('duplicate') && errMsg.contains('email')) ||
+          (errMsg.contains('email') && errMsg.contains('exists'))) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("User with this email already exists."))
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Sign up error: ${authError.message}"))
+        );
+      }
+    } catch (e) {
+      // Some SDK versions throw a generic Exception or FormatException.
+      final err = e.toString().toLowerCase();
+      if (err.contains('already registered') ||
+          err.contains('already exists') ||
+          err.contains('user already registered') ||
+          err.contains('duplicate') && err.contains('email')) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("User with this email already exists."))
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error: $e"))
+        );
+      }
     }
-    
   }
 
   @override

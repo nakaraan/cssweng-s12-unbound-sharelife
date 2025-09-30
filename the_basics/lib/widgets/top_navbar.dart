@@ -72,15 +72,15 @@ class  MenuOptions extends StatelessWidget{
     return Row(
       children: [
         TextButton(
-          onPressed: () {}, 
+          onPressed: () {Navigator.pushReplacementNamed(context, '/admin-dash');}, 
           child: Text('Resources', style: TextStyle(color: Color(0xFF0C0C0D))) // for relevant links
         ),
         TextButton(
-          onPressed: () {}, 
+          onPressed: () {Navigator.pushReplacementNamed(context, '/encoder-dash');},
           child: Text('Contact Us', style: TextStyle(color: Color(0xFF0C0C0D))) // for contact info
         ),
         TextButton(
-          onPressed: () {}, 
+          onPressed: () {Navigator.pushReplacementNamed(context, '/member-dash');},
           child: Text('Help', style: TextStyle(color: Color(0xFF0C0C0D))) // for troubleshooting
         ),
       ]
