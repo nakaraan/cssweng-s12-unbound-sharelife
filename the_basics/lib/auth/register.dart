@@ -14,7 +14,7 @@ class _RegisterPageState extends State<RegisterPage> {
   final authService = AuthService();
 
   // text controllers
-  final _usernameController = TextEditingController();
+  // final _usernameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
@@ -35,21 +35,21 @@ class _RegisterPageState extends State<RegisterPage> {
 
   @override
   void dispose() {
-    _usernameController.dispose();
+    // _usernameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
   }
-
+/*
   // sign up button pressed
   void signUp() async {
     // prepare data
-    final username = _usernameController.text.trim();
+    // final username = _usernameController.text.trim();
     final email = _emailController.text.trim();
     final password = _passwordController.text;
     final confirmPassword = _confirmPasswordController.text;
-
+/*
   // validate username: non-empty, 3-30 chars, allowed: letters
   final usernameRegex = RegExp(r'^[a-zA-Z0-9._-]{3,30}$');
   if (username.isEmpty || !usernameRegex.hasMatch(username)) {
@@ -62,28 +62,123 @@ class _RegisterPageState extends State<RegisterPage> {
     );
     return;
   }
-
+*/
   //check if the passwords match
   if (password != confirmPassword) {
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Passwords don't match")));
     return;
   }
 
+  // check if password fits supabase requirements
+  if (password.length < 6) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Password must be at least 6 characters")),
+    );
+    return;
+  }
+/*
   //attempt sign up..
   try {
-    await authService.signUpWithEmailPassword(email, password, userMetadata: {'username': username});
+    // Test connection first
+    print('Testing connection before registration...');
+    final connectionOk = await authService.testConnection();
+    if (!connectionOk) {
+      throw Exception('Cannot connect to Supabase server. Please check your internet connection.');
+    }
 
-    // pop this register page
-    Navigator.pop(context);
+    // Use the complete registration method with dummy data for now
+    await authService.completeUserRegistration(
+      email: email,
+      password: password,
+      username: username,
+      firstName: 'Test', // You can add text fields for these later
+      lastName: 'User',
+      dateOfBirth: DateTime(1990, 1, 1), // Default date
+      contactNumber: '1234567890', // Default number
+    );
+
+    // Show success message
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Registration successful!")),
+      );
+      Navigator.pop(context);
+    }
   } catch (e) {
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
-      print(e);
+      // Print detailed error to console
+      print('Registration error: $e');
+      print('Error type: ${e.runtimeType}');
+      
+      // Show detailed error in a dialog
+      showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('Registration Error'),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('Error details:', style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                Text('$e'),
+                const SizedBox(height: 16),
+                const Text('Check the console for more details.'),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+      
+      // Also show a snackbar for quick reference
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Registration failed: ${e.toString().substring(0, 100)}...")),
+      );
+    }
+  } 
+              */
+
+  }
+  */
+
+  void signUp() async {
+    // prepare data
+    final email = _emailController.text;
+    final password = _passwordController.text;
+    final confirmPassword = _confirmPasswordController.text;
+
+
+    // check that passwords match
+    if (password != confirmPassword) {
+      ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text("Passwords don't match")));
+      return;
+    }
+
+    // attempt sign up...
+    try {
+      await authService.signUpWithEmailPassword(email, password);
+
+      if (mounted) {
+        Navigator.pop(context);
+      }
+      
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text("Error: $e")));
+        return;
+      }
     }
   }
 
-  }
-  
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -184,7 +279,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         const SizedBox(height: 20),
                         
                         TextField(
-                          controller: _usernameController,
+                          // controller: _usernameController,
                           decoration: InputDecoration(
                             labelText: 'Username',
                             border: OutlineInputBorder(),

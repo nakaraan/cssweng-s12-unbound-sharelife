@@ -1,8 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:the_basics/auth/auth_service.dart';
 
-class TopNavBar extends StatelessWidget {
+class TopNavBar extends StatefulWidget {
   const TopNavBar({super.key});
+
+  @override
+  State<TopNavBar> createState() => _TopNavBarState();
+}
+
+class _TopNavBarState extends State<TopNavBar> {
+
+  // get auth service
+  final authService = AuthService();
+
+  // logout button pressed
+  void logOut() async {
+    await authService.signOut();
+    if (mounted) {
+      Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
