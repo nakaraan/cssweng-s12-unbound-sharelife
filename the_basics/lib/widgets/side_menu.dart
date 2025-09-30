@@ -48,38 +48,8 @@ class SideMenu extends StatelessWidget {
 
       case "Encoder":
         return [
-          Container(
-            height: 80,
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              border: Border(
-                top: BorderSide(color: Colors.grey, width: 1.0),
-              ),
-            ),
-            child: const Row(
-              children: [
-                Padding(
-                  padding: EdgeInsets.only(left: 20),
-                  child: Icon(Icons.menu),
-                ),
-                SizedBox(width: 8),
-                Text(
-                  "Encoder",
-                  style: TextStyle(
-                    fontSize: 25,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          SizedBox(height: 10),
           ListTile(
-            leading: Image.asset(
-                    'assets/icons/loan_icon.png',
-                    width: 24,
-                    height: 24,
-                  ),
+            leading: Icon(Icons.query_stats),
             title: const Text("Dashboard"),
             onTap: () {},
           ),
@@ -91,13 +61,13 @@ class SideMenu extends StatelessWidget {
           ),
           SizedBox(height: 10),
           ListTile(
-            leading: const Icon(Icons.receipt_long),
+            leading: const Icon(Icons.folder_open),
             title: const Text("Record Installments"),
             onTap: () {},
           ),
           SizedBox(height: 10),
           ListTile(
-            leading: const Icon(Icons.file_present),
+            leading: const Icon(Icons.supervisor_account),
             title: const Text("Member Info"),
             onTap: () {},
           )
