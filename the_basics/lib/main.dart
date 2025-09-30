@@ -8,7 +8,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Supabase.initialize(
-    url: 'https://tgwuswcywrbrcwacldrk.supabase.coL',
+    url: 'https://tgwuswcywrbrcwacldrk.supabase.co',
     anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRnd3Vzd2N5d3JicmN3YWNsZHJrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkxNTI3OTcsImV4cCI6MjA3NDcyODc5N30.85VT2XUJ_U7869baU9lijLZ5bP1p9_NBqjepCvzGKxE', // Public Anon Key, meant to be seen by users
   );
   runApp(const MainApp());

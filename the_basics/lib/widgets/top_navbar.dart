@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:the_basics/auth/auth_service.dart';
 
 class TopNavBar extends StatelessWidget {
   const TopNavBar({super.key});
@@ -69,8 +70,21 @@ class  MenuOptions extends StatelessWidget{
   }
 }
 
-class ProfileBtn extends StatelessWidget {
+class ProfileBtn extends StatefulWidget {
   const ProfileBtn({super.key});
+
+  @override
+  State<ProfileBtn> createState() => _ProfileBtnState();
+}
+
+class _ProfileBtnState extends State<ProfileBtn> {
+  // get auth service
+  final authService = AuthService();
+
+  // logout button
+  void logout() async {
+    await authService.signOut();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -85,6 +99,7 @@ class ProfileBtn extends StatelessWidget {
         ),
         PopupMenuItem(
           padding: EdgeInsets.zero,
+          onTap: () { logout(); },
           child: Center(
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 5),
