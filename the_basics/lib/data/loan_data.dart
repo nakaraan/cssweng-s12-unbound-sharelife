@@ -19,7 +19,7 @@ List<Map<String, dynamic>> loansData = [
     "instType": "6 months",
     "totalInst": 6,
     "instAmt": 3333.33,
-    "status": "Active",
+    "status": "Inactive",
   },
   {
     "ref": "2345678",
@@ -30,7 +30,7 @@ List<Map<String, dynamic>> loansData = [
     "instType": "6 months",
     "totalInst": 6,
     "instAmt": 5050.0,
-    "status": "Active",
+    "status": "Inactive",
   },
   {
     "ref": "3456789",
@@ -41,7 +41,7 @@ List<Map<String, dynamic>> loansData = [
     "instType": "6 months",
     "totalInst": 6,
     "instAmt": 8125.0,
-    "status": "Active",
+    "status": "Inactive",
   },
   {
     "ref": "4567890",
@@ -52,7 +52,7 @@ List<Map<String, dynamic>> loansData = [
     "instType": "3 months",
     "totalInst": 6,
     "instAmt": 2625.0,
-    "status": "Active",
+    "status": "Inactive",
   },
   {
     "ref": "5678901",
@@ -63,7 +63,7 @@ List<Map<String, dynamic>> loansData = [
     "instType": "6 months",
     "totalInst": 6,
     "instAmt": 11250.0,
-    "status": "Active",
+    "status": "Inactive",
   },
   {
     "ref": "6789012",
@@ -74,7 +74,7 @@ List<Map<String, dynamic>> loansData = [
     "instType": "6 months",
     "totalInst": 6,
     "instAmt": 6416.67,
-    "status": "Active",
+    "status": "Inactive",
   },
   {
     "ref": "7890123",
@@ -85,7 +85,7 @@ List<Map<String, dynamic>> loansData = [
     "instType": "6 months",
     "totalInst": 6,
     "instAmt": 7333.33,
-    "status": "Active",
+    "status": "Inactive",
   },
   {
     "ref": "8901234",
@@ -96,7 +96,7 @@ List<Map<String, dynamic>> loansData = [
     "instType": "6 months",
     "totalInst": 6,
     "instAmt": 4208.33,
-    "status": "Active",
+    "status": "Inactive",
   },
   {
     "ref": "9012345",
@@ -107,7 +107,7 @@ List<Map<String, dynamic>> loansData = [
     "instType": "6 months",
     "totalInst": 6,
     "instAmt": 10125.0,
-    "status": "Active",
+    "status": "Inactive",
   },
   {
     "ref": "0123456",
@@ -118,7 +118,7 @@ List<Map<String, dynamic>> loansData = [
     "instType": "6 months",
     "totalInst": 6,
     "instAmt": 7116.67,
-    "status": "Active",
+    "status": "Inactive",
   },
   {
     "ref": "1123457",
@@ -129,7 +129,7 @@ List<Map<String, dynamic>> loansData = [
     "instType": "6 months",
     "totalInst": 6,
     "instAmt": 4725.0,
-    "status": "Active",
+    "status": "Inactive",
   },
   {
     "ref": "2123458",
@@ -140,7 +140,7 @@ List<Map<String, dynamic>> loansData = [
     "instType": "6 months",
     "totalInst": 6,
     "instAmt": 8800.0,
-    "status": "Active",
+    "status": "Inactive",
   },
   {
     "ref": "3123459",
@@ -151,7 +151,7 @@ List<Map<String, dynamic>> loansData = [
     "instType": "6 months",
     "totalInst": 6,
     "instAmt": 6080.0,
-    "status": "Active",
+    "status": "Inactive",
   },
   {
     "ref": "4123460",
@@ -162,7 +162,7 @@ List<Map<String, dynamic>> loansData = [
     "instType": "6 months",
     "totalInst": 6,
     "instAmt": 5208.33,
-    "status": "Active",
+    "status": "Inactive",
   },
   {
     "ref": "5123461",
@@ -173,7 +173,7 @@ List<Map<String, dynamic>> loansData = [
     "instType": "6 months",
     "totalInst": 6,
     "instAmt": 10200.0,
-    "status": "Active",
+    "status": "Inactive",
   },
   {
     "ref": "6123462",
@@ -184,7 +184,7 @@ List<Map<String, dynamic>> loansData = [
     "instType": "6 months",
     "totalInst": 6,
     "instAmt": 7840.0,
-    "status": "Active",
+    "status": "Inactive",
   },
   {
     "ref": "7123463",
@@ -195,7 +195,7 @@ List<Map<String, dynamic>> loansData = [
     "instType": "6 months",
     "totalInst": 6,
     "instAmt": 6416.67,
-    "status": "Active",
+    "status": "Inactive",
   },
   {
     "ref": "8123464",
@@ -206,7 +206,7 @@ List<Map<String, dynamic>> loansData = [
     "instType": "3 months",
     "totalInst": 6,
     "instAmt": 4266.67,
-    "status": "Active",
+    "status": "Inactive",
   },
   {
     "ref": "9123465",
@@ -217,6 +217,6 @@ List<Map<String, dynamic>> loansData = [
     "instType": "6 months",
     "totalInst": 6,
     "instAmt": 8683.33,
-    "status": "Active",
+    "status": "Inactive",
   },
 ];

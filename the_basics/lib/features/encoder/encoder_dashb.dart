@@ -99,9 +99,3 @@ class SummaryCard extends StatelessWidget {
     );
   }
 }
-
-/*
-void main() {
-  runApp(const MaterialApp(home: EncoderDashb()));
-}
-*/

@@ -227,11 +227,11 @@ class _MemDBState extends State<MemDB> {
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: const [
-                                      Text("Total Loan Amount",
+                                      Text("Principal Repayment",
                                           style: TextStyle(
                                               fontWeight: FontWeight.bold)),
                                       SizedBox(height: 8),
-                                      Text("₱100,000"),
+                                      Text("₱60,000"),
                                     ],
                                   ),
                                 ),
@@ -257,7 +257,33 @@ class _MemDBState extends State<MemDB> {
                                           style: TextStyle(
                                               fontWeight: FontWeight.bold)),
                                       SizedBox(height: 8),
-                                      Text("₱50,000"),
+                                      Text("₱40,000"),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Container(
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(8),
+                                    boxShadow: [
+                                      BoxShadow(
+                                          color: Colors.black.withOpacity(0.05),
+                                          blurRadius: 8,
+                                          offset: const Offset(0, 2))
+                                    ],
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: const [
+                                      Text("Total Loan Amount",
+                                          style: TextStyle(
+                                              fontWeight: FontWeight.bold)),
+                                      SizedBox(height: 8),
+                                      Text("₱100,000"),
                                     ],
                                   ),
                                 ),
