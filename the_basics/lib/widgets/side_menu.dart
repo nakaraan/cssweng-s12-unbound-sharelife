@@ -26,28 +26,35 @@ class SideMenu extends StatelessWidget {
     switch (role) {
       case "Admin":
         return [
-          const DrawerHeader(
-            child: Text("Admin Panel", style: TextStyle(fontSize: 20)),
-          ),
-          ListTile(
-            leading: const Icon(Icons.dashboard),
-            title: const Text("Dashboard"),
-            onTap: () {},
-          ),
+          SizedBox(height: 10),
           ListTile(
             leading: const Icon(Icons.people),
-            title: const Text("Manage Users"),
+            title: const Text("Staff Management"),
             onTap: () {},
           ),
+          SizedBox(height: 10),
           ListTile(
-            leading: const Icon(Icons.settings),
-            title: const Text("Settings"),
+            leading: const Icon(Icons.checklist_rtl),
+            title: const Text("Loan Approvals"),
+            onTap: () {},
+          ),
+          SizedBox(height: 10),
+          ListTile(
+            leading: const Icon(Icons.track_changes),
+            title: const Text("Financial Tracking & Reports"),
+            onTap: () {},
+          ),
+          SizedBox(height: 10),
+          ListTile(
+            leading: const Icon(CupertinoIcons.eye),
+            title: const Text("Vouchers & Disbursements Oversight"),
             onTap: () {},
           ),
         ];
 
       case "Encoder":
         return [
+          SizedBox(height: 10),
           ListTile(
             leading: Icon(Icons.query_stats),
             title: const Text("Dashboard"),
@@ -76,6 +83,7 @@ class SideMenu extends StatelessWidget {
       case "Member":
       default:
         return [
+          SizedBox(height: 10),
           ListTile(
             leading: Image.asset(
                     'assets/icons/loan_icon.png',

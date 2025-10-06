@@ -28,16 +28,22 @@ class _TopNavBarState extends State<TopNavBar> {
       height: 80,
       padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.5),
-            spreadRadius: 0,
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+  color: Colors.white,
+  boxShadow: [
+    BoxShadow(
+      color: Colors.grey.withOpacity(0.5),
+      spreadRadius: 0,
+      blurRadius: 4,
+      offset: const Offset(0, 2),
+    ),
+  ],
+  border: const Border(
+    bottom: BorderSide(
+      color: Colors.grey,
+      width: 0.5,
+    ),
+  ),
+),
       child: Row(
         children: const [
           SideMenuBtn(),
@@ -50,19 +56,57 @@ class _TopNavBarState extends State<TopNavBar> {
   }
 }
 
-class  SideMenuBtn extends StatelessWidget{
+class SideMenuBtn extends StatelessWidget {
   const SideMenuBtn({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return IconButton(
-      icon: const Icon(Icons.menu),
-      onPressed: () {
-        Scaffold.of(context).openDrawer();  // opens sidebar
-      },
+    String role = "Member";  
+
+    return Row(
+      children: [
+        IconButton(
+
+          // logo
+          icon: Image.asset(
+            'assets/icons/logo.png',
+            height: 40,
+            width: 40,
+          ),
+          onPressed: () {
+            Scaffold.of(context).openDrawer();  // opens sidebar (dunno if i shld keep this pa)
+          },
+        ),
+
+        const SizedBox(width: 8),
+
+        // org name + role
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text(
+              "Unbound Sharelife",
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+                color: Colors.black,
+              ),
+            ),
+            Text(
+              "Member/Encoder/Admin", // will change based on role
+              style: const TextStyle(
+                fontSize: 14,
+                color: Colors.grey,
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }
+
 
 class  MenuOptions extends StatelessWidget{
   const MenuOptions({super.key});

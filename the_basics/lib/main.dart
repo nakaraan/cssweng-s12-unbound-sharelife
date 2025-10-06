@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:the_basics/auth/login.dart';
-import 'package:the_basics/features/admin/admin.dart';
+import 'package:the_basics/features/admin/admin_dashb.dart';
 import 'package:the_basics/features/encoder/encoder_dashb.dart';
 import 'package:the_basics/features/member/mem_dashb.dart';
 import 'package:the_basics/auth/register.dart';
@@ -25,12 +25,12 @@ class MainApp extends StatelessWidget {
     return MaterialApp(
       initialRoute: '/login',
       routes: {
-        '/home':(context) => MemDB(),
+        '/home':(context) => MemberDB(),
         '/login': (context) => LoginPage(),
         '/register': (context) => RegisterPage(),
         '/admin-dash': (context) => AdminDashboard(),
         '/encoder-dash': (context) => EncoderDashboard(),
-        '/member-dash': (context) => MemDB()
+        '/member-dash': (context) => MemberDB()
       },
     );
   }
