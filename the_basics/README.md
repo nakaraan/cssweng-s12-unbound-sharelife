@@ -4,7 +4,7 @@
 - Installing Flutter: https://youtu.be/1KidD72q87s?si=KqQ_V8afImhx6V-8
 - Download Android Studio: https://youtu.be/8gc5z3aKc6k?si=zPzpXwIx48255TdD
 - Adding Flutter's Web Support: https://youtu.be/ihIuG-JiArQ?si=oqAthmznFZ2BfKKo
-    - _Note: lipat to channel stable instead of channel beta. Also, you can stop at timestamp 1:37. Beyond that is testing nalang_
+    - _Note: lipat to channel stable instead of channel beta. Also, you can stop the video at timestamp 1:37. Beyond that is testing nalang_
 - Web app development using Flutter: https://youtu.be/UOTwRXAh6VY?si=HxJeA8xFYtjh52k8
 
 ## How to Run Project:
