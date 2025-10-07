@@ -3,14 +3,14 @@ import 'package:the_basics/widgets/top_navbar.dart';
 import 'package:the_basics/widgets/side_menu.dart';
 import 'package:the_basics/data/loan_data.dart';
 
-class MemDB extends StatefulWidget {
-  const MemDB({super.key});
+class MemberDB extends StatefulWidget {
+  const MemberDB({super.key});
 
   @override
-  State<MemDB> createState() => _MemDBState();
+  State<MemberDB> createState() => _MemDBState();
 }
 
-class _MemDBState extends State<MemDB> {
+class _MemDBState extends State<MemberDB> {
   int? sortColumnIndex;
   bool isAscending = true;
 
@@ -109,6 +109,10 @@ class _MemDBState extends State<MemDB> {
                               fontSize: 28,
                               fontWeight: FontWeight.bold,
                             ),
+                          ),
+                          const Text(
+                            "View your loan applications and their statuses.",
+                            style: TextStyle(color: Colors.grey, fontSize: 14),
                           ),
                           const SizedBox(height: 24),
 
@@ -318,35 +322,35 @@ class _MemDBState extends State<MemDB> {
                                       columnSpacing: 58,
                                       columns: [
                                         DataColumn(
-                                            label: const Text("Ref. No."),
+                                            label: const Text("Ref. No.", style: TextStyle( fontWeight: FontWeight.bold)),
                                             onSort: (i, asc) => onSort(i, asc)),
                                         DataColumn(
-                                            label: const Text("Amt."),
+                                            label: const Text("Amt.", style: TextStyle( fontWeight: FontWeight.bold)),
                                             numeric: true,
                                             onSort: (i, asc) => onSort(i, asc)),
                                         DataColumn(
-                                            label: const Text("Interest"),
+                                            label: const Text("Interest", style: TextStyle( fontWeight: FontWeight.bold)),
                                             numeric: true,
                                             onSort: (i, asc) => onSort(i, asc)),
                                         DataColumn(
-                                            label: const Text("Start Date"),
+                                            label: const Text("Start Date", style: TextStyle( fontWeight: FontWeight.bold)),
                                             onSort: (i, asc) => onSort(i, asc)),
                                         DataColumn(
-                                            label: const Text("Due Date"),
+                                            label: const Text("Due Date", style: TextStyle( fontWeight: FontWeight.bold)),
                                             onSort: (i, asc) => onSort(i, asc)),
                                         DataColumn(
-                                            label: const Text("Inst Type"),
+                                            label: const Text("Inst Type", style: TextStyle( fontWeight: FontWeight.bold)),
                                             onSort: (i, asc) => onSort(i, asc)),
                                         DataColumn(
-                                            label: const Text("Total Inst"),
+                                            label: const Text("Total Inst", style: TextStyle( fontWeight: FontWeight.bold)),
                                             numeric: true,
                                             onSort: (i, asc) => onSort(i, asc)),
                                         DataColumn(
-                                            label: const Text("Inst Amt."),
+                                            label: const Text("Inst Amt.", style: TextStyle( fontWeight: FontWeight.bold)),
                                             numeric: true,
                                             onSort: (i, asc) => onSort(i, asc)),
                                         DataColumn(
-                                            label: const Text("Status"),
+                                            label: const Text("Status", style: TextStyle( fontWeight: FontWeight.bold)),
                                             onSort: (i, asc) => onSort(i, asc)),
                                       ],
                                       rows: loans

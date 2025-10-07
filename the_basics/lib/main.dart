@@ -48,12 +48,12 @@ class _MainAppState extends State<MainApp> {
     return MaterialApp(
       initialRoute: '/login',
       routes: {
-        '/home':(context) => MemDB(),
+        '/home':(context) => MemberDB(),
         '/login': (context) => LoginPage(),
         '/register': (context) => RegisterPage(),
         '/admin-dash': (context) => AdminDashboard(),
         '/encoder-dash': (context) => EncoderDashboard(),
-        '/member-dash': (context) => MemDB()
+        '/member-dash': (context) => MemberDB()
       },
     );
   }
