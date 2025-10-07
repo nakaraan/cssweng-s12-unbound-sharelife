@@ -9,12 +9,12 @@
 
 ## How to Run Project:
 1. Make sure you have flutter and its dependencies (as indicated on the resources) installed.
-2. Open a Powershell terminal to 'the_basics' dir either using the Windows Powershell app or the terminal in VsCode.
+2. Open a Powershell terminal to 'the_basics' dir either using the Windows Powershell app or the terminal in VsCode.  
     `cd the_basics`
-3. Run the program using this command:
+3. Run the program using this command:  
     `flutter run -d chrome`
 4. login with the following information:
-    `email: namh.b1l6@gmail.com`
+    `email: namh.b1l6@gmail.com`  
     `password: password`
 
 _Note: As of now, the Back End is still working on account creation. You can still access the other role's static pages through the buttons on the top nav bar though._
