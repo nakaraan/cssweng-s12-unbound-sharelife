@@ -16,7 +16,11 @@ class _RegisterPageState extends State<RegisterPage> {
   final authService = AuthService();
 
   // text controllers
-  // final _usernameController = TextEditingController();
+  final _firstNameController = TextEditingController();
+  final _lastNameController = TextEditingController();
+  final _dateOfBirthController = TextEditingController();
+  final _usernameController = TextEditingController();
+  final _contactNumberController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
@@ -37,7 +41,11 @@ class _RegisterPageState extends State<RegisterPage> {
 
   @override
   void dispose() {
-    // _usernameController.dispose();
+    _firstNameController.dispose();
+    _lastNameController.dispose();
+    _dateOfBirthController.dispose();
+    _usernameController.dispose();
+    _contactNumberController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
@@ -48,6 +56,40 @@ class _RegisterPageState extends State<RegisterPage> {
     final email = _emailController.text.trim().toLowerCase();
     final password = _passwordController.text;
     final confirmPassword = _confirmPasswordController.text;
+    final username = _usernameController.text.trim();
+    final firstName = _firstNameController.text.trim();
+    final lastName = _lastNameController.text.trim();
+    final dateOfBirth = _dateOfBirthController.text.trim();
+    final contactNo = _contactNumberController.text.trim();
+
+
+    // INPUT VALIDATION //
+    if (email.isEmpty || password.isEmpty || confirmPassword.isEmpty || username.isEmpty || firstName.isEmpty || lastName.isEmpty || dateOfBirth.isEmpty || contactNo.isEmpty) {
+      ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text("Please fill in all fields.")));
+      return;
+    }
+
+    String dobIso = '';
+    if (dateOfBirth.isNotEmpty) {
+      try {
+        final dobParts = dateOfBirth.split('/');
+        if (dobParts.length == 3) {
+          final month = int.parse(dobParts[0]);
+          final day = int.parse(dobParts[1]);
+          final year = int.parse(dobParts[2]);
+          final dt = DateTime(year, month, day);
+          dobIso = dt.toIso8601String().split('T')[0];
+        }
+      } catch (_) {
+        dobIso = '';
+      }
+    }
+    if (email.isNotEmpty && !RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(email)) {
+      ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text("Please enter a valid email address.")));
+      return;
+    }
 
     if (password != confirmPassword) {
       ScaffoldMessenger.of(context)
@@ -55,29 +97,37 @@ class _RegisterPageState extends State<RegisterPage> {
       return;
     }
 
-    // Add this check BEFORE attempting signup
+    // Check if user exists
     try {
       final userExists = await authService.checkUserExists(email);
       if (userExists) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("User with this email already exists."))
         );
-        return; // Stop here if user exists
+        return;
       }
     } catch (e) {
       debugPrint('Error checking user existence: $e');
-      // Continue with signup attempt even if check fails
     }
 
     try {
-      // Using the AuthService method which returns AuthResponse from gotrue.
-      final response = await authService.signUpWithEmailPassword(email, password);
+      // Sign up with profile data saved locally
+      final response = await authService.signUpWithEmailPassword(
+        email, 
+        password,
+        username: username,
+        firstName: firstName,
+        lastName: lastName,
+        dateOfBirth: dobIso,
+        contactNo: contactNo,
+      );
 
-      // On success, response.user will be non-null (or response.session depending on signup flow)
-      if (response.user != null || response.session != null) {
+      if (response.user != null) {
+        // Show success message and redirect to login
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Please check your email to confirm your registration."))
+          const SnackBar(content: Text("Please check your email to confirm your registration. Your profile will be completed automatically when you click the confirmation link."))
         );
+        
         if (mounted) {
           Navigator.of(context).pushReplacement(
             PageRouteBuilder(
@@ -93,14 +143,12 @@ class _RegisterPageState extends State<RegisterPage> {
         return;
       }
 
-      // If no user/session, try to inspect response for an error message (some SDK variants include `error` differently)
-      // Many versions return a Map-like `rawResponse` or throw an exception instead. So fall back to generic message:
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Sign up did not complete. Please try again."))
       );
+
     } on AuthException catch (authError) {
-      // supabase_flutter may throw AuthException / GotrueError with a message
-      final errMsg = authError.message?.toLowerCase() ?? '';
+      final errMsg = authError.message.toLowerCase() ?? '';
       if (errMsg.contains('already registered') ||
           errMsg.contains('already exists') ||
           errMsg.contains('user already registered') ||
@@ -115,7 +163,6 @@ class _RegisterPageState extends State<RegisterPage> {
         );
       }
     } catch (e) {
-      // Some SDK versions throw a generic Exception or FormatException.
       final err = e.toString().toLowerCase();
       if (err.contains('already registered') ||
           err.contains('already exists') ||
@@ -177,7 +224,8 @@ class _RegisterPageState extends State<RegisterPage> {
                         ),
                         const SizedBox(height: 20),
                         
-                        const TextField(
+                        TextField(
+                          controller: _firstNameController,
                           decoration: InputDecoration(
                             labelText: 'First Name',
                             border: OutlineInputBorder(),
@@ -186,7 +234,8 @@ class _RegisterPageState extends State<RegisterPage> {
                         ),
                         const SizedBox(height: 15),
                         
-                        const TextField(
+                        TextField(
+                          controller: _lastNameController,
                           decoration: InputDecoration(
                             labelText: 'Last Name',
                             border: OutlineInputBorder(),
@@ -195,7 +244,8 @@ class _RegisterPageState extends State<RegisterPage> {
                         ),
                         const SizedBox(height: 15),
                         
-                        const TextField(
+                        TextField(
+                          controller: _dateOfBirthController,
                           decoration: InputDecoration(
                             labelText: 'Date of Birth',
                             border: OutlineInputBorder(),
@@ -204,7 +254,8 @@ class _RegisterPageState extends State<RegisterPage> {
                         ),
                         const SizedBox(height: 15),
                         
-                        const TextField(
+                        TextField(
+                          controller: _contactNumberController,
                           decoration: InputDecoration(
                             labelText: 'Contact Number',
                             border: OutlineInputBorder(),
@@ -232,7 +283,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         const SizedBox(height: 20),
                         
                         TextField(
-                          // controller: _usernameController,
+                          controller: _usernameController,
                           decoration: InputDecoration(
                             labelText: 'Username',
                             border: OutlineInputBorder(),
