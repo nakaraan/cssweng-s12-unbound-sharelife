@@ -9,7 +9,7 @@
 
 ## How to Run Project:
 1. Make sure you have flutter and its dependencies (as indicated on the resources) installed.
-2. Open a Powershell terminal to 'the_basics' dir either using the Windows Powershell app or the embed in VsCode.
+2. Open a Powershell terminal to 'the_basics' dir either using the Windows Powershell app or the terminal in VsCode.
     `cd the_basics`
 3. Run the program using this command:
     `flutter run -d chrome`
