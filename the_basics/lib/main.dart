@@ -4,6 +4,7 @@ import 'package:the_basics/features/admin/admin_dashb.dart';
 import 'package:the_basics/features/encoder/encoder_dashb.dart';
 import 'package:the_basics/features/member/mem_dashb.dart';
 import 'package:the_basics/auth/register.dart';
+import 'package:the_basics/auth/staff_register.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:the_basics/auth/auth_service.dart';
 
@@ -53,7 +54,8 @@ class _MainAppState extends State<MainApp> {
         '/register': (context) => RegisterPage(),
         '/admin-dash': (context) => AdminDashboard(),
         '/encoder-dash': (context) => EncoderDashboard(),
-        '/member-dash': (context) => MemberDB()
+        '/member-dash': (context) => MemberDB(),
+        '/staff-register': (context) => StaffRegisterPage()
       },
     );
   }

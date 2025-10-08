@@ -192,8 +192,96 @@ class AuthService {
   
 
   // ADMIN-CREATION METHODS
+  // STAFF SIGNUP SYSTEM
+  // Sign up, saves staff profile locally until email confirmed
+  Future<AuthResponse> signUpStaffWithEmailPassword(
+    String email,
+    String password, {
+    required String username,
+    required String firstName,
+    required String lastName,
+    required String dateOfBirth,
+    required String contactNo,
+    required String role, //'Approver' or 'Encoder'
+  }) async {
+    // Save staff profile data locally before signup
+    await ProfileStorage.savePendingProfile({
+      'email': email.trim().toLowerCase(),
+      'username': username.trim(),
+      'first_name': firstName.trim(),
+      'last_name': lastName.trim(),
+      'date_of_birth': dateOfBirth.trim(),
+      'contact_no': contactNo.trim(),
+      'role': role.trim(),
+    });
 
+    // Only do the auth signup - no staff table insert yet
+    final response = await _supabase.auth.signUp(
+      email: email,
+      password: password,
+    );
 
+    return response;
+  }
+
+  // Claim pending staff profile after authentication
+  Future<void> tryClaimPendingStaffProfile({int maxRetries = 3}) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) return;
+
+    final pending = await ProfileStorage.getPendingProfile();
+    if (pending == null) return;
+
+    final row = <String, dynamic>{
+      'email_address': pending['email'] ?? user.email,
+      'username': pending['username'],
+      'first_name': pending['first_name'],
+      'last_name': pending['last_name'],
+      'contact_no': pending['contact_no'],
+      'date_of_birth': pending['date_of_birth'],
+      'role': pending['role'],
+    };
+
+    for (var attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        // Check if staff already exists by email
+        final existing = await _supabase
+            .from('staff')
+            .select('id, email_address')
+            .eq('email_address', row['email_address'])
+            .maybeSingle();
+
+        if (existing != null && existing['id'] != null) {
+          // Update existing staff (in case they already have a partial record)
+          await _supabase
+              .from('staff')
+              .update(row)
+              .eq('id', existing['id']);
+          print('Updated existing staff profile');
+        } else {
+          // Insert new staff
+          await _supabase.from('staff').insert(row);
+          print('Inserted new staff profile');
+        }
+
+        // Success - clear pending profile
+        await ProfileStorage.clearPendingProfile();
+        print('Staff profile claimed successfully');
+        return;
+
+      } catch (e) {
+        print('Attempt [${attempt + 1}] failed: $e');
+        if (attempt < maxRetries - 1) {
+          await Future.delayed(Duration(seconds: 1 << attempt));
+          continue;
+        } else {
+          print('Failed to claim pending staff profile after $maxRetries attempts: $e');
+          // Don't clear pending profile on failure - user can try again later
+          return;
+        }
+      }
+    }
+  }
   // 
 
 }

@@ -245,6 +245,25 @@ class _AdminDashboardState extends State<AdminDashboard> {
                             ),
                           ),
                         ),
+                        // Add Staff button at the bottom
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: Padding(
+                            padding: const EdgeInsets.only(top: 16.0),
+                            child: ElevatedButton.icon(
+                              onPressed: () {
+                                Navigator.pushNamed(context, '/staff-register');
+                              },
+                              icon: const Icon(Icons.person_add, color: Colors.white),
+                              label: const Text("Add Staff", style: TextStyle(color: Colors.white)),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.green,
+                                minimumSize: const Size(140, 44),
+                                padding: const EdgeInsets.symmetric(horizontal: 16),
+                              ),
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                   ),

@@ -3,7 +3,8 @@ import 'package:the_basics/auth/login.dart';
 import 'package:the_basics/auth/register.dart';
 
 class AuthNavBar extends StatelessWidget {
-  const AuthNavBar({super.key});
+  final bool hideAuthButtons;
+  const AuthNavBar({super.key, this.hideAuthButtons = false});
 
   @override
   Widget build(BuildContext context) {
@@ -30,51 +31,53 @@ class AuthNavBar extends StatelessWidget {
             ),
           ),
           const Spacer(),
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pushReplacement(
-                PageRouteBuilder(
-                  pageBuilder: (context, animation, secondaryAnimation) => LoginPage(),
-                  transitionDuration: const Duration(milliseconds: 150),
-                  reverseTransitionDuration: const Duration(milliseconds: 150),
-                  transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                    return FadeTransition(opacity: animation, child: child);
-                  },
-                )
-              );
-            },
-            child: const Text(
-              'Login',
-              style: TextStyle(
-                color: Color(0xFF0C0C0D),
-                fontSize: 16,
+          if (!hideAuthButtons) ...[
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pushReplacement(
+                  PageRouteBuilder(
+                    pageBuilder: (context, animation, secondaryAnimation) => LoginPage(),
+                    transitionDuration: const Duration(milliseconds: 150),
+                    reverseTransitionDuration: const Duration(milliseconds: 150),
+                    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                      return FadeTransition(opacity: animation, child: child);
+                    },
+                  )
+                );
+              },
+              child: const Text(
+                'Login',
+                style: TextStyle(
+                  color: Color(0xFF0C0C0D),
+                  fontSize: 16,
+                ),
               ),
             ),
-          ),
-          const SizedBox(width: 8),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(context).pushReplacement(
-                PageRouteBuilder(
-                  pageBuilder: (context, animation, secondaryAnimation) => RegisterPage(),
-                  transitionDuration: const Duration(milliseconds: 150),
-                  reverseTransitionDuration: const Duration(milliseconds: 150),
-                  transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                    return FadeTransition(opacity: animation, child: child);
-                  },
-                )
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF0C0C0D),
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(4),
+            const SizedBox(width: 8),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pushReplacement(
+                  PageRouteBuilder(
+                    pageBuilder: (context, animation, secondaryAnimation) => RegisterPage(),
+                    transitionDuration: const Duration(milliseconds: 150),
+                    reverseTransitionDuration: const Duration(milliseconds: 150),
+                    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                      return FadeTransition(opacity: animation, child: child);
+                    },
+                  )
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF0C0C0D),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(4),
+                ),
               ),
+              child: const Text('Register'),
             ),
-            child: const Text('Register'),
-          ),
+          ],
         ],
       ),
     );
