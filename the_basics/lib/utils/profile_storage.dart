@@ -11,6 +11,7 @@ class ProfileStorage {
 
   static Future<Map<String, String>?> getPendingProfile() async {
     final s = await _storage.read(key: _kPendingKey);
+    print("📂 ProfileStorage.getPendingProfile() returned: $s");
     if (s == null) return null;
     
     final Map parsed = jsonDecode(s);

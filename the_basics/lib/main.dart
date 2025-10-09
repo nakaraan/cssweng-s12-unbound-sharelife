@@ -5,6 +5,7 @@ import 'package:the_basics/features/encoder/encoder_dashb.dart';
 import 'package:the_basics/features/member/mem_dashb.dart';
 import 'package:the_basics/auth/register.dart';
 import 'package:the_basics/auth/staff_register.dart';
+import 'package:the_basics/utils/profile_storage.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:the_basics/auth/auth_service.dart';
 
@@ -36,10 +37,19 @@ class _MainAppState extends State<MainApp> {
   }
 
   void _setupAuthListener() {
-    supabase.auth.onAuthStateChange.listen((data) async {
-      final event = data.event;
-      if (event == AuthChangeEvent.signedIn) {
-        await authService.tryClaimPendingProfile();
+  supabase.auth.onAuthStateChange.listen((data) async {
+    final event = data.event;
+    print("🔔 Auth event: $event"); // ← This should appear when you sign in
+
+    if (event == AuthChangeEvent.signedIn) {
+      print("✅ User signed in — checking pending profile...");
+      final pending = await ProfileStorage.getPendingProfile();
+      print("📂 Pending profile: $pending");
+
+      if (pending != null) { 
+          print('📌 Claiming as MEMBER');
+          await authService.tryClaimPendingProfile();
+        }
       }
     });
   }
