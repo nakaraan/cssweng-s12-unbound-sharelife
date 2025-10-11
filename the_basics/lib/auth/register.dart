@@ -99,10 +99,10 @@ class _RegisterPageState extends State<RegisterPage> {
 
     // Check if user exists
     try {
-      final userExists = await authService.checkUserExists(email);
+      final userExists = await authService.checkUserExists(email, username: username);
       if (userExists) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("User with this email already exists."))
+          const SnackBar(content: Text("User with this email or username already exists."))
         );
         return;
       }

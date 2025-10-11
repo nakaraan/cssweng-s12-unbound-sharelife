@@ -80,6 +80,28 @@ class SideMenu extends StatelessWidget {
           )
         ];
 
+      case "Settings":
+        return [
+          SizedBox(height: 10),
+          ListTile(
+            leading: const Icon(Icons.person),
+            title: const Text("Personal Info"),
+            onTap: () {},
+          ),
+          SizedBox(height: 10),
+          ListTile(
+            leading: const Icon(Icons.settings),
+            title: const Text("Account Settings"),
+            onTap: () {},
+          ),
+          SizedBox(height: 10),
+          ListTile(
+            leading: const Icon(Icons.receipt_long),
+            title: const Text("My Statements"),
+            onTap: () {},
+          )
+        ];
+
       case "Member":
       default:
         return [

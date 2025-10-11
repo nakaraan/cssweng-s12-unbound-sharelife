@@ -11,7 +11,7 @@ class EncoderDashboard extends StatelessWidget {
       backgroundColor: const Color(0xFFEFEFEF),
       body: Column(
         children: [
-          const TopNavBar(),
+          const TopNavBar(splash: "Encoder"),
           Expanded(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,

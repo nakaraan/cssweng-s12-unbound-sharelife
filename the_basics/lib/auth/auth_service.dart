@@ -34,10 +34,39 @@ class AuthService {
         password: password
       );
     }
-  
+
+  Future<String?> getUserRole() async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) return null;
+
+    final email = user.email!; // null safety
+
+    try {
+      final staffRecord = await _supabase
+          .from('staff')
+          .select('role')
+          .eq('email_address', email)
+          .maybeSingle();
+
+      if (staffRecord != null && staffRecord['role'] != null) {
+        return staffRecord['role'] as String;
+      }
+
+      final memberRecord = await _supabase
+          .from('members')
+          .select('role')
+          .eq('email_address', email)
+          .maybeSingle();
+
+      return memberRecord?['role'] as String?;
+    } catch (e) {
+      print("Error fetching user role: $e");
+      return null;
+    }
+  }
+
   final String anonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRoZ21vdmtpb3Vicml6YWpzdnplIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkyMzk3MzIsImV4cCI6MjA3NDgxNTczMn0.PBXfbH3n7yTVwZs_e9li_U9F8YirKTl4Wl3TVr1o0gw';
   
-  // Sign up, saves profile locally until email confirmed
   Future<AuthResponse> signUpWithEmailPassword(
     String email,
     String password, {
@@ -56,9 +85,41 @@ class AuthService {
       'last_name': lastName.trim(),
       'date_of_birth': dateOfBirth.trim(),
       'contact_no': contactNo.trim(),
+      'role': 'member', // mark as member so claim logic knows where to insert
     });
 
     // Only do the auth signup - no members table insert yet
+    final response = await _supabase.auth.signUp(
+      email: email,
+      password: password,
+    );
+
+    return response;
+  }
+
+  // NEW: Staff sign up using same pending-profile flow as members
+  Future<AuthResponse> staffSignUp(
+    String email,
+    String password, {
+    required String username,
+    required String firstName,
+    required String lastName,
+    required String dateOfBirth,
+    required String contactNo,
+    String role = 'encoder',
+  }) async {
+    // Save staff profile data locally before signup (include role)
+    await ProfileStorage.savePendingProfile({
+      'email': email.trim().toLowerCase(),
+      'username': username.trim(),
+      'first_name': firstName.trim(),
+      'last_name': lastName.trim(),
+      'date_of_birth': dateOfBirth.trim(),
+      'contact_no': contactNo.trim(),
+      'role': role.trim(), // important for claim step
+    });
+
+    // Use Supabase auth signUp (same as member flow)
     final response = await _supabase.auth.signUp(
       email: email,
       password: password,
@@ -75,6 +136,9 @@ class AuthService {
     final pending = await ProfileStorage.getPendingProfile();
     if (pending == null) return;
 
+    final role = (pending['role'] ?? 'member').toString().toLowerCase();
+
+    // Build common row; will adjust per table below
     final row = <String, dynamic>{
       'email_address': pending['email'] ?? user.email,
       'username': pending['username'],
@@ -84,24 +148,36 @@ class AuthService {
       'date_of_birth': pending['date_of_birth'],
     };
 
+    // Remove empty/null date_of_birth to avoid DB errors (calling code may require non-null)
+    if (row['date_of_birth'] == null || (row['date_of_birth'] as String).isEmpty) {
+      row.remove('date_of_birth');
+    }
+
+    // If staff, ensure role present in row (staff table requires role)
+    if (role == 'encoder') {
+      row['role'] = pending['role'] ?? 'encoder';
+    }
+
+    final targetTable = role == 'encoder' ? 'encoder' : 'members';
+
     for (var attempt = 0; attempt < maxRetries; attempt++) {
       try {
-        // Check if member already exists by email
+        // Check if record already exists by email
         final existing = await _supabase
-            .from('members')
+            .from(targetTable)
             .select('id, email_address')
             .eq('email_address', row['email_address'])
             .maybeSingle();
 
         if (existing != null && existing['id'] != null) {
-          // Update existing member (in case they already have a partial record)
+          // Update existing record (in case they already have a partial record)
           await _supabase
-              .from('members')
+              .from(targetTable)
               .update(row)
               .eq('id', existing['id']);
         } else {
-          // Insert new member
-          await _supabase.from('members').insert(row);
+          // Insert new record
+          await _supabase.from(targetTable).insert(row);
         }
 
         // Success - clear pending profile
@@ -113,54 +189,85 @@ class AuthService {
           await Future.delayed(Duration(seconds: 1 << attempt));
           continue;
         } else {
-          // Don't clear pending profile on failure - user can try again later
+          // Don't clear pending profile on failure - admin/user can try again later
           return;
         }
       }
     }
   }
 
+  // Check if user exists before registration
+  Future<bool> checkUserExists(String email, {String? username}) async {
+    final trimmedEmail = email.trim().toLowerCase();
+    final trimmedUsername = username?.trim();
 
-
-  final String endpoint = "https://thgmovkioubrizajsvze.supabase.co/functions/v1/check-user-exists";
-
-// ...existing code...
-  Future<bool> checkUserExists(String email) async {
-    final trimmed = email.trim().toLowerCase();
-
-    final payload = {'email': trimmed};
-
-    try {
-      final dynamic fnResp = await _supabase.functions.invoke(
-        'check-user-exists',
-        body: payload,
-      );
-
-      if (fnResp == null) {
-        return false;
-      }
-
-      if (fnResp is Map<String, dynamic>) {
-        final exists = fnResp['exists'] == true;
-        return exists;
-      }
-
-      if (fnResp is String) {
-        try {
-          final Map<String, dynamic> body = jsonDecode(fnResp);
-          final exists = body['exists'] == true;
-          return exists;
-        } catch (parseErr, st) {
-          return false;
-        }
-      }
-      return false;
-    } catch (e, st) {
+    // If both empty, nothing to check
+    if ((trimmedEmail.isEmpty) && (trimmedUsername == null || trimmedUsername.isEmpty)) {
       return false;
     }
+
+    try {
+      // Debug
+      print('checkUserExists: email="$trimmedEmail" username="$trimmedUsername"');
+
+      // Check by email if provided (email match is already normalized)
+      if (trimmedEmail.isNotEmpty) {
+        final staffByEmail = await _supabase
+            .from('staff')
+            .select('id')
+            .eq('email_address', trimmedEmail)
+            .maybeSingle();
+        if (staffByEmail != null) {
+          print('checkUserExists: found by email in staff');
+          return true;
+        }
+
+        final memberByEmail = await _supabase
+            .from('members')
+            .select('id')
+            .eq('email_address', trimmedEmail)
+            .maybeSingle();
+        if (memberByEmail != null) {
+          print('checkUserExists: found by email in members');
+          return true;
+        }
+      }
+
+      // Check by username (case-sensitive)
+      if (trimmedUsername != null && trimmedUsername.isNotEmpty) {
+        // check staff for username matches (case-sensitive)
+        final staffByUsername = await _supabase
+            .from('staff')
+            .select('id, username, email_address')
+            .eq('username', trimmedUsername);
+        
+        print('staffByUsername raw: $staffByUsername');
+        
+        if (staffByUsername != null && staffByUsername is List && staffByUsername.isNotEmpty) {
+          print('checkUserExists: found by username in staff: $staffByUsername');
+          return true;
+        }
+
+        // check members for username matches (case-sensitive)
+        final memberByUsername = await _supabase
+            .from('members')
+            .select('id')
+            .eq('username', trimmedUsername);
+        if (memberByUsername != null && memberByUsername is List && memberByUsername.isNotEmpty) {
+          print('checkUserExists: found by username in members: $memberByUsername');
+          return true;
+        }
+      }
+
+      // Not found
+      print('checkUserExists: not found');
+      return false;
+    } catch (e) {
+      print('checkUserExists error: $e');
+      rethrow;
+    }
   }
-// ...existing code...
-  
+
 
   // Sign out
   Future<void> signOut() async {
@@ -186,7 +293,7 @@ class AuthService {
     required String lastName,
     required String contactNo,
     String? dateOfBirth,
-    String role = 'staff',
+    String role = 'encoder',
   }) async {
     try {
       // Normalize and validate email

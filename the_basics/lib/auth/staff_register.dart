@@ -54,55 +54,84 @@ class _StaffRegisterPageState extends State<StaffRegisterPage> {
   }
 
   void createStaffAccount() async {
-  final email = _emailController.text.trim().toLowerCase();
-  final username = _usernameController.text.trim();
-  final firstName = _firstNameController.text.trim();
-  final lastName = _lastNameController.text.trim();
-  final contactNo = _contactNumberController.text.trim();
-  final dateOfBirth = _dateOfBirthController.text.trim();
+    final email = _emailController.text.trim().toLowerCase();
+    final username = _usernameController.text.trim();
+    final firstName = _firstNameController.text.trim();
+    final lastName = _lastNameController.text.trim();
+    final contactNo = _contactNumberController.text.trim();
+    final dateOfBirth = _dateOfBirthController.text.trim();
+    final password = _passwordController.text;
+    final confirmPassword = _confirmPasswordController.text;
 
-  // Validation (same as before)
-  if (email.isEmpty || username.isEmpty || firstName.isEmpty || lastName.isEmpty || contactNo.isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Please fill all fields.")));
-    return;
-  }
+    // INPUT VALIDATION //
+    if (email.isEmpty || username.isEmpty || firstName.isEmpty || lastName.isEmpty || contactNo.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Please fill all fields.")));
+      return;
+    }
 
-  String dobIso = '';
-  if (dateOfBirth.isNotEmpty) {
+    // Validate email
+    if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(email)) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Please enter a valid email address.")));
+      return;
+    }
+
+    // Convert DOB to ISO if possible (reuse logic from register.dart)
+    String dobIso = '';
+    if (dateOfBirth.isNotEmpty) {
+      try {
+        final parts = dateOfBirth.split('/');
+        if (parts.length == 3) {
+          final dt = DateTime(int.parse(parts[2]), int.parse(parts[0]), int.parse(parts[1]));
+          dobIso = dt.toIso8601String().split('T')[0];
+        }
+      } catch (_) {}
+    }
+
+    if (password != confirmPassword) {
+      ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text("Passwords don't match")));
+      return;
+    }
+
+    // Check if user exists
     try {
-      final parts = dateOfBirth.split('/');
-      if (parts.length == 3) {
-        final dt = DateTime(int.parse(parts[2]), int.parse(parts[0]), int.parse(parts[1]));
-        dobIso = dt.toIso8601String().split('T')[0];
+      final userExists = await authService.checkUserExists(email, username: username);
+      if (userExists) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("User with this email or username already exists."))
+        );
+        return;
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('Error checking user existence: $e');
+    }
+
+    try {
+      // Use new staffSignUp so we reuse pending-profile flow (no edge function)
+      final response = await authService.staffSignUp(
+        email,
+        password,
+        username: username,
+        firstName: firstName,
+        lastName: lastName,
+        dateOfBirth: dobIso,
+        contactNo: contactNo,
+        role: 'encoder',
+      );
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Staff invited! Please check email to complete registration."))
+      );
+
+      // Go back to admin dashboard
+      Navigator.of(context).pop();
+
+    } on AuthException catch (authErr) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: ${authErr.message}")));
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
+    }
   }
-
-  try {
-    // ✅ Call Edge Function instead of signUp
-    await supabase.functions.invoke('create-staff', body: {
-      'email_address': email,
-      'username': username,
-      'first_name': firstName,
-      'last_name': lastName,
-      'contact_no': contactNo,
-      'date_of_birth': dobIso,
-      'role': 'staff', // or let admin choose
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Staff invited! They'll receive an email shortly.")),
-    );
-
-    // Go back to admin dashboard
-    Navigator.of(context).pop();
-
-  } catch (e) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Error: $e")),
-    );
-  }
-}
 
   @override
   Widget build(BuildContext context) {
