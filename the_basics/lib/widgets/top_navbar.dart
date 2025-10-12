@@ -3,7 +3,9 @@ import 'package:the_basics/auth/auth_service.dart';
 import 'package:the_basics/auth/login.dart';
 
 class TopNavBar extends StatefulWidget {
-  const TopNavBar({super.key});
+  final String splash;
+  const TopNavBar({super.key, required this.splash});
+
 
   @override
   State<TopNavBar> createState() => _TopNavBarState();
@@ -45,11 +47,11 @@ class _TopNavBarState extends State<TopNavBar> {
   ),
 ),
       child: Row(
-        children: const [
-          SideMenuBtn(),
-          Spacer(),
-          MenuOptions(),
-          ProfileBtn(),
+        children: [
+          SideMenuBtn(splash: widget.splash),  // Pass splash to SideMenuBtn
+          const Spacer(),
+          const MenuOptions(),
+          const ProfileBtn(),
         ],
       ),
     );
@@ -57,12 +59,11 @@ class _TopNavBarState extends State<TopNavBar> {
 }
 
 class SideMenuBtn extends StatelessWidget {
-  const SideMenuBtn({super.key});
+  final String splash;
+  const SideMenuBtn({super.key, required this.splash});
 
   @override
   Widget build(BuildContext context) {
-    String role = "Member";  
-
     return Row(
       children: [
         IconButton(
@@ -94,7 +95,7 @@ class SideMenuBtn extends StatelessWidget {
               ),
             ),
             Text(
-              "Member/Encoder/Admin", // will change based on role
+              splash,  // Display the splash value
               style: const TextStyle(
                 fontSize: 14,
                 color: Colors.grey,
@@ -155,7 +156,8 @@ class _ProfileBtnState extends State<ProfileBtn> {
     return PopupMenuButton(
       offset: const Offset(0, 40),
       itemBuilder: (context) => [
-        const PopupMenuItem(
+        PopupMenuItem(
+          onTap:() => Navigator.pushNamed(context, '/account-options'),
           padding: EdgeInsets.symmetric(vertical: 8, horizontal: 5),
           child: Center(
             child: Text("Profile Settings"),

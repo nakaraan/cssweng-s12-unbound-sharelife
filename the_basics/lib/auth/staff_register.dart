@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:the_basics/auth/auth_service.dart';
 import 'package:the_basics/widgets/auth_navbar.dart';
+import 'package:the_basics/utils/profile_storage.dart';
+import 'package:the_basics/main.dart';
 
 class StaffRegisterPage extends StatefulWidget {
   const StaffRegisterPage({super.key});
@@ -51,43 +53,38 @@ class _StaffRegisterPageState extends State<StaffRegisterPage> {
     super.dispose();
   }
 
-  void signUp() async {
+  void createStaffAccount() async {
     final email = _emailController.text.trim().toLowerCase();
-    final password = _passwordController.text;
-    final confirmPassword = _confirmPasswordController.text;
     final username = _usernameController.text.trim();
     final firstName = _firstNameController.text.trim();
     final lastName = _lastNameController.text.trim();
-    final dateOfBirth = _dateOfBirthController.text.trim();
     final contactNo = _contactNumberController.text.trim();
-
+    final dateOfBirth = _dateOfBirthController.text.trim();
+    final password = _passwordController.text;
+    final confirmPassword = _confirmPasswordController.text;
 
     // INPUT VALIDATION //
-    if (email.isEmpty || password.isEmpty || confirmPassword.isEmpty || username.isEmpty || firstName.isEmpty || lastName.isEmpty || dateOfBirth.isEmpty || contactNo.isEmpty) {
-      ScaffoldMessenger.of(context)
-        .showSnackBar(const SnackBar(content: Text("Please fill in all fields.")));
+    if (email.isEmpty || username.isEmpty || firstName.isEmpty || lastName.isEmpty || contactNo.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Please fill all fields.")));
       return;
     }
 
+    // Validate email
+    if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(email)) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Please enter a valid email address.")));
+      return;
+    }
+
+    // Convert DOB to ISO if possible (reuse logic from register.dart)
     String dobIso = '';
     if (dateOfBirth.isNotEmpty) {
       try {
-        final dobParts = dateOfBirth.split('/');
-        if (dobParts.length == 3) {
-          final month = int.parse(dobParts[0]);
-          final day = int.parse(dobParts[1]);
-          final year = int.parse(dobParts[2]);
-          final dt = DateTime(year, month, day);
+        final parts = dateOfBirth.split('/');
+        if (parts.length == 3) {
+          final dt = DateTime(int.parse(parts[2]), int.parse(parts[0]), int.parse(parts[1]));
           dobIso = dt.toIso8601String().split('T')[0];
         }
-      } catch (_) {
-        dobIso = '';
-      }
-    }
-    if (email.isNotEmpty && !RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(email)) {
-      ScaffoldMessenger.of(context)
-        .showSnackBar(const SnackBar(content: Text("Please enter a valid email address.")));
-      return;
+      } catch (_) {}
     }
 
     if (password != confirmPassword) {
@@ -98,10 +95,10 @@ class _StaffRegisterPageState extends State<StaffRegisterPage> {
 
     // Check if user exists
     try {
-      final userExists = await authService.checkUserExists(email);
+      final userExists = await authService.checkUserExists(email, username: username);
       if (userExists) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("User with this email already exists."))
+          const SnackBar(content: Text("User with this email or username already exists."))
         );
         return;
       }
@@ -110,60 +107,29 @@ class _StaffRegisterPageState extends State<StaffRegisterPage> {
     }
 
     try {
-      // Sign up with profile data saved locally
-      final response = await authService.signUpStaffWithEmailPassword(
-        email, 
+      // Use new staffSignUp so we reuse pending-profile flow (no edge function)
+      final response = await authService.staffSignUp(
+        email,
         password,
         username: username,
         firstName: firstName,
         lastName: lastName,
         dateOfBirth: dobIso,
         contactNo: contactNo,
-        role: 'staff'//default to 'staff' for now
+        role: 'encoder',
       );
-
-      if (response.user != null) {
-        // Show success message and redirect to login
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Please check your email to confirm your registration. Your profile will be completed automatically when you click the confirmation link."))
-        );
-        
-        return;
-      }
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Sign up did not complete. Please try again."))
+        const SnackBar(content: Text("Staff invited! Please check email to complete registration."))
       );
 
-    } on AuthException catch (authError) {
-      final errMsg = authError.message.toLowerCase() ?? '';
-      if (errMsg.contains('already registered') ||
-          errMsg.contains('already exists') ||
-          errMsg.contains('user already registered') ||
-          (errMsg.contains('duplicate') && errMsg.contains('email')) ||
-          (errMsg.contains('email') && errMsg.contains('exists'))) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("User with this email already exists."))
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Sign up error: ${authError.message}"))
-        );
-      }
+      // Go back to admin dashboard
+      Navigator.of(context).pop();
+
+    } on AuthException catch (authErr) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: ${authErr.message}")));
     } catch (e) {
-      final err = e.toString().toLowerCase();
-      if (err.contains('already registered') ||
-          err.contains('already exists') ||
-          err.contains('user already registered') ||
-          err.contains('duplicate') && err.contains('email')) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("User with this email already exists."))
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Error: $e"))
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
     }
   }
 
@@ -344,7 +310,7 @@ class _StaffRegisterPageState extends State<StaffRegisterPage> {
               
               // Register button
               ElevatedButton(
-                onPressed: signUp,
+                onPressed: createStaffAccount,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF0C0C0D),
                   foregroundColor: Colors.white,

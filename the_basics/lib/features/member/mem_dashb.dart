@@ -80,7 +80,7 @@ class _MemDBState extends State<MemberDB> {
       body: Column(
         children: [
           // top nav bar
-          const TopNavBar(),
+          const TopNavBar(splash: "Member"),
 
           // main area
           Expanded(
