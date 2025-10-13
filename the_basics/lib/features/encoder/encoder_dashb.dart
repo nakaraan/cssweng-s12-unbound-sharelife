@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:the_basics/widgets/top_navbar.dart';
 import 'package:the_basics/widgets/side_menu.dart';
@@ -38,10 +39,26 @@ class EncoderDashboard extends StatelessWidget {
                               mainAxisSpacing: 16,
                               childAspectRatio: 2,
                               children: const [
-                                SummaryCard(title: "Pending Applications", value: "123", icon: Icons.pending_actions),
-                                SummaryCard(title: "Encoded This Month", value: "456", icon: Icons.checklist),
-                                SummaryCard(title: "Approved Applications", value: "101", icon: Icons.check_circle),
-                                SummaryCard(title: "Rejected Applications", value: "789", icon: Icons.cancel),
+                                SummaryCard(
+                                  title: "Pending Applications", 
+                                  desc: "Applications currently awaiting review, decision, or further action", 
+                                  value: "123", 
+                                  icon: Icons.pending_actions),
+                                SummaryCard(
+                                  title: "Pending Approval", 
+                                  desc: "Encoded applications that are awaiting administrator approval", 
+                                  value: "456", 
+                                  icon: CupertinoIcons.hourglass),
+                                SummaryCard(
+                                  title: "Approved Applications", 
+                                  desc: "Applications that have been reviewed and approved", 
+                                  value: "101", 
+                                  icon: Icons.check_circle),
+                                SummaryCard(
+                                  title: "Total Encoded Applications", 
+                                  desc: "The total number of applications that have been encoded", 
+                                  value: "789", 
+                                  icon: Icons.checklist),
                               ],
                             ),
                           ),
@@ -61,12 +78,14 @@ class EncoderDashboard extends StatelessWidget {
 
 class SummaryCard extends StatelessWidget {
   final String title;
+  final String desc;
   final String value;
   final IconData icon;
 
   const SummaryCard({
     super.key,
     required this.title,
+    required this.desc,
     required this.value,
     this.icon = Icons.access_time,
   });
@@ -80,18 +99,29 @@ class SummaryCard extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Icon(icon, size: 40, color: Colors.black),
+            Icon(icon, size: 200, color: CupertinoColors.placeholderText),
             const SizedBox(width: 16),
-            Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                const SizedBox(height: 8),
-                Text(value, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-              ],
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title, 
+                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w600), 
+                    softWrap: true,
+                    overflow: TextOverflow.visible),
+                  const SizedBox(height: 2),
+                  Text(
+                    desc, 
+                    style: const TextStyle(fontSize: 14, color: Colors.grey, fontWeight: FontWeight.w600),
+                    softWrap: true,
+                    overflow: TextOverflow.visible),
+                  const SizedBox(height: 8),
+                  Text(value, style: const TextStyle(fontSize: 40, fontWeight: FontWeight.bold)),
+                ],
+              ),
             ),
           ],
         ),
