@@ -139,7 +139,7 @@ class _StaffRegisterPageState extends State<StaffRegisterPage> {
       backgroundColor: const Color(0xFFEFEFEF),
       body: Column(
         children: [
-          const AuthNavBar(hideAuthButtons: true),
+          const AuthNavBar(hideAuthButtons: true, showBackButton: true,),
           Expanded(
             child: Center(
               child: Container(

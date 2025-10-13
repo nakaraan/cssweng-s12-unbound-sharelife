@@ -6,7 +6,7 @@ import 'package:the_basics/features/encoder/encoder_dashb.dart';
 import 'package:the_basics/features/member/mem_dashb.dart';
 import 'package:the_basics/auth/register.dart';
 import 'package:the_basics/auth/staff_register.dart';
-import 'package:the_basics/utils/profile_storage.dart';
+import 'package:the_basics/utils/profile_storage_io.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:the_basics/auth/auth_service.dart';
 
@@ -49,7 +49,7 @@ class _MainAppState extends State<MainApp> {
         print("<⋯> Pending profile: $pending");
 
         if (pending != null) { 
-            print('<◍> Claiming as a MEMBER...');
+            print('<◍> Claiming profile...');
             await authService.tryClaimPendingProfile();
         }
 

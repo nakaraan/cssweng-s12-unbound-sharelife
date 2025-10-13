@@ -90,7 +90,12 @@ class _AccountSettingsState extends State<AccountSettings> {
       backgroundColor: const Color(0xFFEFEFEF),
       body: Column(
         children: [
-          const TopNavBar(splash: "Settings"),
+          TopNavBar(splash: "Settings", 
+          logoIsBackButton: true, 
+          onAccountSettings: () {},
+          onLogoBack: () {
+            if (Navigator.of(context).canPop()) Navigator.of(context).pop();
+          }),
           Expanded(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,

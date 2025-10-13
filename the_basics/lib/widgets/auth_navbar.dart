@@ -4,7 +4,15 @@ import 'package:the_basics/auth/register.dart';
 
 class AuthNavBar extends StatelessWidget {
   final bool hideAuthButtons;
-  const AuthNavBar({super.key, this.hideAuthButtons = false});
+  final bool showBackButton;
+  final VoidCallback? onBack;
+
+  const AuthNavBar({
+    super.key,
+    this.hideAuthButtons = false,
+    this.showBackButton = false,
+    this.onBack,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -22,6 +30,20 @@ class AuthNavBar extends StatelessWidget {
       ),
       child: Row(
         children: [
+          if (showBackButton) ...[
+            IconButton(
+              tooltip: 'Back',
+              icon: const Icon(Icons.arrow_back, color: Color(0xFF0C0C0D)),
+              onPressed: () {
+                if (onBack != null) {
+                  onBack!();
+                } else {
+                  if (Navigator.of(context).canPop()) Navigator.of(context).pop();
+                }
+              },
+            ),
+            const SizedBox(width: 8),
+          ],
           const Text(
             'Unbound Sharelife Loan Handling System',
             style: TextStyle(

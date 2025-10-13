@@ -1,10 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:the_basics/auth/auth_service.dart';
-import 'package:the_basics/auth/login.dart';
 
 class TopNavBar extends StatefulWidget {
   final String splash;
-  const TopNavBar({super.key, required this.splash});
+  final bool logoIsBackButton;
+  final VoidCallback? onLogoBack;
+  final VoidCallback? onAccountSettings;
+
+  const TopNavBar({
+    super.key,
+    required this.splash,
+    this.logoIsBackButton = false,
+    this.onLogoBack,
+    this.onAccountSettings,
+  });
 
 
   @override
@@ -48,10 +57,14 @@ class _TopNavBarState extends State<TopNavBar> {
 ),
       child: Row(
         children: [
-          SideMenuBtn(splash: widget.splash),  // Pass splash to SideMenuBtn
+          SideMenuBtn(
+            splash: widget.splash,
+            logoIsBackButton: widget.logoIsBackButton,
+            onLogoBack: widget.onLogoBack,
+          ),
           const Spacer(),
           const MenuOptions(),
-          const ProfileBtn(),
+          ProfileBtn(onAccountSettings: widget.onAccountSettings),
         ],
       ),
     );
@@ -60,22 +73,37 @@ class _TopNavBarState extends State<TopNavBar> {
 
 class SideMenuBtn extends StatelessWidget {
   final String splash;
-  const SideMenuBtn({super.key, required this.splash});
+  final bool logoIsBackButton;
+  final VoidCallback? onLogoBack;
+
+  const SideMenuBtn({
+    super.key,
+    required this.splash,
+    this.logoIsBackButton = false,
+    this.onLogoBack,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
         IconButton(
-
-          // logo
+          // logo (can act as back button if enabled)
           icon: Image.asset(
             'assets/icons/logo.png',
             height: 40,
             width: 40,
           ),
           onPressed: () {
-            Scaffold.of(context).openDrawer();  // opens sidebar (dunno if i shld keep this pa)
+            if (logoIsBackButton) {
+              if (onLogoBack != null) {
+                onLogoBack!();
+              } else {
+                if (Navigator.of(context).canPop()) Navigator.of(context).pop();
+              }
+            } else {
+              Scaffold.of(context).openDrawer();  // opens sidebar (dunno if i shld keep this pa)
+            }
           },
         ),
 
@@ -134,7 +162,14 @@ class  MenuOptions extends StatelessWidget{
 }
 
 class ProfileBtn extends StatefulWidget {
-  const ProfileBtn({super.key});
+  final bool accountSettingsRoute;
+  final VoidCallback? onAccountSettings;
+
+  const ProfileBtn({
+    super.key,
+    this.accountSettingsRoute = true,
+    this.onAccountSettings,
+  });
 
   @override
   State<ProfileBtn> createState() => _ProfileBtnState();
@@ -157,7 +192,13 @@ class _ProfileBtnState extends State<ProfileBtn> {
       offset: const Offset(0, 40),
       itemBuilder: (context) => [
         PopupMenuItem(
-          onTap:() => Navigator.pushNamed(context, '/account-options'),
+          onTap: () {
+            if (widget.onAccountSettings != null) {
+              widget.onAccountSettings!();
+            } else if (widget.accountSettingsRoute) {
+              Navigator.pushNamed(context, '/account-options');
+            }
+          },
           padding: EdgeInsets.symmetric(vertical: 8, horizontal: 5),
           child: Center(
             child: Text("Profile Settings"),
