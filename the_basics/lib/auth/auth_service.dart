@@ -38,7 +38,7 @@ class AuthService {
       print('[signIn] Detected username input. Looking up email by username...');
       try {
         final userByUsername = await _supabase
-            .from('staff')
+            .from('members')
             .select('email_address')
             .eq('username', input_credential)
             .maybeSingle();
