@@ -13,9 +13,20 @@
     `cd the_basics`
 3. Run the program using this command:  
     `flutter run -d chrome`
-4. login with the following information:
+4. login with the following information:  
+    
+    __Member__  
     `email: namh.b1l6@gmail.com`  
     `password: password`
+
+    __Encoder__  
+    `email: namh.akashax@gmail.com`  
+    `password: password`
+
+    __Admin__  
+    `email: wesner.almin.iii@gmail.com`  
+    `password: password`
+
 
 _Note: As of now, the Back End is still working on account creation. You can still access the other role's static pages through the buttons on the top nav bar though._
 - Resources: Admin dashboard
