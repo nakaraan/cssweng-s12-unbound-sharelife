@@ -1,0 +1,191 @@
+import 'package:flutter/material.dart';
+import 'package:the_basics/widgets/side_menu.dart';
+import 'package:the_basics/widgets/top_navbar.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+class LoanReviewPage extends StatelessWidget {
+  const LoanReviewPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.grey[100],
+      body: Row(
+        children: [
+          // SIDEBAR
+          Container(
+            width: 200,
+            color: Colors.white,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 40),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Text("Staff Management",
+                      style: TextStyle(color: Colors.grey[700])),
+                ),
+                const SizedBox(height: 20),
+                Container(
+                  color: Colors.grey[200],
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+                  child: const Text("Loan Review",
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold, color: Colors.black)),
+                ),
+                const SizedBox(height: 20),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Text("Loan & Payment Records",
+                      style: TextStyle(color: Colors.grey[700])),
+                ),
+                const SizedBox(height: 20),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Text("Vouchers & Disbursements",
+                      style: TextStyle(color: Colors.grey[700])),
+                ),
+              ],
+            ),
+          ),
+
+          // MAIN CONTENT
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // TOP BAR
+                Container(
+                  height: 60,
+                  color: Colors.white,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: const [
+                          CircleAvatar(
+                            radius: 16,
+                            backgroundColor: Colors.transparent,
+                            backgroundImage:
+                                AssetImage('assets/logo.png'), // optional logo
+                          ),
+                          SizedBox(width: 10),
+                          Text(
+                            'Unbound Sharelife',
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 16),
+                          ),
+                        ],
+                      ),
+                      Row(
+                        children: const [
+                          Text("Resources   Contact   Help   "),
+                          Icon(Icons.person_outline),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
+                // HEADER
+                Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        "Loan Review",
+                        style: TextStyle(
+                            fontSize: 28, fontWeight: FontWeight.bold),
+                      ),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.grey[300],
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 6),
+                        child: const Text(
+                          "5 Applications Pending",
+                          style: TextStyle(fontSize: 14),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 24),
+                  child: Text(
+                    "Review and approve/reject pending loan applications.",
+                    style: TextStyle(fontSize: 14, color: Colors.black54),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // DATA TABLE
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                    child: Card(
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8)),
+                      elevation: 1,
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.vertical,
+                        child: DataTable(
+                          columns: const [
+                            DataColumn(label: Text("Applicant")),
+                            DataColumn(label: Text("Amount")),
+                            DataColumn(label: Text("Loan Type")),
+                            DataColumn(label: Text("Date Submitted")),
+                            DataColumn(label: Text("Status")),
+                          ],
+                          rows: [
+                            _buildRow("Mark Reyes", "₱50,000",
+                                "Personal Loan", "Oct 20, 2025"),
+                            _buildRow("Jane Smith", "₱50,000", "Home Loan",
+                                "Oct 20, 2025"),
+                            _buildRow("Juan Dela Cruz", "₱50,000",
+                                "Personal Loan", "Oct 20, 2025"),
+                            _buildRow("Anne Mendoza", "₱50,000", "Home Loan",
+                                "Oct 20, 2025"),
+                            _buildRow("Randy Villanueva", "₱40,000",
+                                "Personal Loan", "Oct 20, 2025"),
+                            _buildRow("John Doe", "₱50,000", "Personal Loan",
+                                "Oct 21, 2025"),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  DataRow _buildRow(
+      String applicant, String amount, String type, String date) {
+    return DataRow(cells: [
+      DataCell(Text(applicant)),
+      DataCell(Text(amount)),
+      DataCell(Text(type)),
+      DataCell(Text(date)),
+      DataCell(ElevatedButton(
+        onPressed: () {},
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.blueAccent,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+        ),
+        child: const Text("Review"),
+      )),
+    ]);
+  }
+}
