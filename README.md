@@ -25,7 +25,10 @@
 
     __Admin__  
     `email: wesner.almin.iii@gmail.com`  
-    `password: password`
+    `password: password`  
+
+In case you come across any problems, run the following command:
+`flutter doctor`
 
 
 _Note: As of now, the Back End is still working on account creation. You can still access the other role's static pages through the buttons on the top nav bar though._
