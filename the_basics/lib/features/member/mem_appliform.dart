@@ -156,6 +156,15 @@ class _MemAppliformState extends State<MemAppliform> {
     _checkCurrentMemberLoanStatus();
   }
 
+  // Safely parse numeric-like strings into a number (double). Returns 0 on failure.
+  num _toNum(dynamic v) {
+    if (v == null) return 0;
+    final s = v.toString();
+    final cleaned = s.replaceAll(RegExp(r"[^0-9.\-]"), '');
+    if (cleaned.isEmpty) return 0;
+    return double.tryParse(cleaned) ?? 0;
+  }
+
   bool _hasPendingApplication = false;
   bool _hasActiveLoan = false;
   bool _checkedLoanStatus = false;
@@ -532,8 +541,8 @@ class _MemAppliformState extends State<MemAppliform> {
               'member_email': emailController.text,
               'member_phone': phoneNumController.text,
               'address': addrController.text,
-              'loan_amount': loanAmtController.text,
-              'annual_income': anlIncController.text,
+              'loan_amount': _toNum(loanAmtController.text),
+              'annual_income': _toNum(anlIncController.text),
               'business_type': businessTypeController.text,
               'installment': instController.text,
               'repayment_term': termController.text,
@@ -543,6 +552,8 @@ class _MemAppliformState extends State<MemAppliform> {
               'comaker_child_first_name': childFNameController.text,
               'comaker_child_last_name': childLNameController.text,
               'comaker_contact_no': comakerContactController.text,
+              'group_affiliation': groupController.text,
+              'consent': agreeTerms,
               'created_at': appliDateController.text,
             };
             final bytes = await ExportService.buildLoanApplicationPdf(appData);
@@ -571,11 +582,14 @@ class _MemAppliformState extends State<MemAppliform> {
               'Field': 'Address',
               'Value': addrController.text,
             }, {
+              'Field': 'Group Affiliation',
+              'Value': groupController.text,
+            }, {
               'Field': 'Loan Amount',
-              'Value': loanAmtController.text,
+              'Value': _toNum(loanAmtController.text),
             }, {
               'Field': 'Annual Income',
-              'Value': anlIncController.text,
+              'Value': _toNum(anlIncController.text),
             }, {
               'Field': 'Business Type',
               'Value': businessTypeController.text,
@@ -591,6 +605,9 @@ class _MemAppliformState extends State<MemAppliform> {
             }, {
               'Field': 'Co-maker Contact',
               'Value': comakerContactController.text,
+            }, {
+              'Field': 'Consent Given',
+              'Value': agreeTerms ? 'Yes' : 'No',
             }];
             await ExportService.exportAndShareExcel(
               context: context,

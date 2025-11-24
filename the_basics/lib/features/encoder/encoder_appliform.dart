@@ -86,6 +86,15 @@ class _EncAppliformState extends State<EncAppliform> {
     appliDateController.text = "$month-$day-$year";
   }
 
+  // Safely parse numeric-like strings into a number (double). Returns 0 on failure.
+  num _toNum(dynamic v) {
+    if (v == null) return 0;
+    final s = v.toString();
+    final cleaned = s.replaceAll(RegExp(r"[^0-9.\-]"), '');
+    if (cleaned.isEmpty) return 0;
+    return double.tryParse(cleaned) ?? 0;
+  }
+
 
   Widget buttonsRow() {
     return Row(
@@ -96,7 +105,7 @@ class _EncAppliformState extends State<EncAppliform> {
           minWidth: 100,
           onExportPdf: () async {
             // Build loan application data from form
-            final Map<String, dynamic> applicationData = {
+              final Map<String, dynamic> applicationData = {
               'application_date': appliDateController.text,
               'first_name': fNameController.text,
               'last_name': lNameController.text,
@@ -105,8 +114,8 @@ class _EncAppliformState extends State<EncAppliform> {
               'address': addrController.text,
               'phone': phoneNumController.text,
               'email': emailController.text,
-              'loan_amount': loanAmtController.text,
-              'annual_income': anlIncController.text,
+              'loan_amount': _toNum(loanAmtController.text),
+              'annual_income': _toNum(anlIncController.text),
               'loan_type': instController.text,
               'loan_purpose': reasonController.text,
               'payment_term': termController.text,
@@ -157,10 +166,10 @@ class _EncAppliformState extends State<EncAppliform> {
               'value': emailController.text,
             }, {
               'field': 'Loan Amount',
-              'value': loanAmtController.text,
+              'value': _toNum(loanAmtController.text),
             }, {
               'field': 'Annual Income',
-              'value': anlIncController.text,
+              'value': _toNum(anlIncController.text),
             }, {
               'field': 'Installment Type',
               'value': instController.text,

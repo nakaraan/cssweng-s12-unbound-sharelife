@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:the_basics/core/widgets/top_navbar.dart';
 import 'package:the_basics/core/widgets/side_menu.dart';
 import 'package:the_basics/core/widgets/export_dropdown_button.dart';
@@ -198,6 +199,17 @@ class _AdminFinanceManagementState extends State<AdminFinanceManagement> with Si
         missingFields.add('At least one Particular entry');
       }
       
+      // Validate that each particular row has both fields filled if either is filled
+      for (int i = 0; i < particularsRows.length; i++) {
+        String particular = particularsRows[i]['particular'].text.trim();
+        String amount = particularsRows[i]['amount'].text.trim();
+        
+        if ((particular.isNotEmpty && amount.isEmpty) || 
+            (particular.isEmpty && amount.isNotEmpty)) {
+          missingFields.add('Particular row ${i + 1}: Both particular and amount must be filled');
+        }
+      }
+      
       // Validate account rows (at least one row)
       if (accountRows.isEmpty || 
           (accountRows.length == 1 && 
@@ -205,6 +217,17 @@ class _AdminFinanceManagementState extends State<AdminFinanceManagement> with Si
            accountRows[0]['debit'].text.isEmpty && 
            accountRows[0]['credit'].text.isEmpty)) {
         missingFields.add('At least one Account entry');
+      }
+      
+      // Validate that account title is filled if debit or credit has value
+      for (int i = 0; i < accountRows.length; i++) {
+        String title = accountRows[i]['title'].text.trim();
+        String debit = accountRows[i]['debit'].text.trim();
+        String credit = accountRows[i]['credit'].text.trim();
+        
+        if ((debit.isNotEmpty || credit.isNotEmpty) && title.isEmpty) {
+          missingFields.add('Account row ${i + 1}: Title must be filled when debit or credit has value');
+        }
       }
       
       // Validate checked_by fields (name, signature, date)
@@ -580,6 +603,10 @@ class _AdminFinanceManagementState extends State<AdminFinanceManagement> with Si
                 Expanded(
                   child: TextField(
                     controller: row['debit'],
+                    keyboardType: TextInputType.numberWithOptions(decimal: true),
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                    ],
                     decoration: InputDecoration(
                       labelText: "Debit",
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
@@ -591,6 +618,10 @@ class _AdminFinanceManagementState extends State<AdminFinanceManagement> with Si
                 Expanded(
                   child: TextField(
                     controller: row['credit'],
+                    keyboardType: TextInputType.numberWithOptions(decimal: true),
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                    ],
                     decoration: InputDecoration(
                       labelText: "Credit",
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),

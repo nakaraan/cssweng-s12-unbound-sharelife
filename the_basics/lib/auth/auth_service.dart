@@ -356,7 +356,6 @@ class AuthService {
         print('[tryClaimPendingProfile] Using pending profile data, role: $role (attempt $attempt)');
 
         row = {
-          'user_id': user.id,
           'email_address': pending['email'] ?? user.email,
           'username': pending['username'],
           'first_name': pending['first_name'],
@@ -392,7 +391,6 @@ class AuthService {
         final emailUsername = user.email?.split('@')[0] ?? 'user_${user.id.substring(0, 8)}';
         
         row = {
-          'user_id': user.id,
           'email_address': user.email,
           'username': emailUsername, // fallback username
           'first_name': user.userMetadata?['first_name'] ?? 'User',

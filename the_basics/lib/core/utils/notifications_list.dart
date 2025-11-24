@@ -503,6 +503,24 @@ class _NotificationsListPageState extends State<NotificationsListPage> {
                             itemBuilder: (context, index) {
                               final notif = notifications[index];
 
+                              // Apply date filter
+                              final now = DateTime.now();
+                              final ts = int.tryParse(notif['_ts']?.toString() ?? '') ?? 0;
+                              bool dateMatch = true;
+                              if (selectedDateFilter == 'Today') {
+                                final startOfDay = DateTime(now.year, now.month, now.day).millisecondsSinceEpoch;
+                                dateMatch = ts >= startOfDay;
+                              } else if (selectedDateFilter == 'This Week') {
+                                // Week starts on Monday
+                                final startOfWeekDate = now.subtract(Duration(days: now.weekday - 1));
+                                final startOfWeek = DateTime(startOfWeekDate.year, startOfWeekDate.month, startOfWeekDate.day).millisecondsSinceEpoch;
+                                dateMatch = ts >= startOfWeek;
+                              } else if (selectedDateFilter == 'This Month') {
+                                final startOfMonth = DateTime(now.year, now.month, 1).millisecondsSinceEpoch;
+                                dateMatch = ts >= startOfMonth;
+                              }
+                              if (!dateMatch) return const SizedBox.shrink();
+
                               // Apply search filter
                               final title = notif["title"]!.toLowerCase();
                               final body = notif["body"]!.toLowerCase();
