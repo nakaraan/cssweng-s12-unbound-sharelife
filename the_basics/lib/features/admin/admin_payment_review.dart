@@ -186,42 +186,37 @@ class _AdminPaymentReviewState extends State<AdminPaymentReview> {
 
   Widget paymentsTable() {
     return Container(
-      // Do not return Expanded here; the caller already wraps the table with
-      // an Expanded -> SizedBox. Returning Expanded from here caused
-      // Expanded -> SizedBox -> Expanded which throws ParentDataWidget errors.
-      child: Container(
-        padding: EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(8),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 8,
-              offset: Offset(0, 2),
+      padding: EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return SingleChildScrollView(
+            scrollDirection: Axis.vertical,
+            child: DataTable(
+              columns: [
+                DataColumn(label: Text("Member Name", style: TextStyle(fontWeight: FontWeight.bold))),
+                DataColumn(label: Text("Loan ID", style: TextStyle(fontWeight: FontWeight.bold))),
+                DataColumn(label: Text("Amount", style: TextStyle(fontWeight: FontWeight.bold))),
+                DataColumn(label: Text("Payment Type", style: TextStyle(fontWeight: FontWeight.bold))),
+                DataColumn(label: Text("Date Submitted", style: TextStyle(fontWeight: FontWeight.bold))),
+                DataColumn(label: Text("Action", style: TextStyle(fontWeight: FontWeight.bold))),
+              ],
+              rows: filteredPayments.map((payment) {
+                return _buildRow(payment);
+              }).toList(),
             ),
-          ],
-        ),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            return SingleChildScrollView(
-              scrollDirection: Axis.vertical,
-              child: DataTable(
-                columns: [
-                  DataColumn(label: Text("Member Name", style: TextStyle(fontWeight: FontWeight.bold))),
-                  DataColumn(label: Text("Loan ID", style: TextStyle(fontWeight: FontWeight.bold))),
-                  DataColumn(label: Text("Amount", style: TextStyle(fontWeight: FontWeight.bold))),
-                  DataColumn(label: Text("Payment Type", style: TextStyle(fontWeight: FontWeight.bold))),
-                  DataColumn(label: Text("Date Submitted", style: TextStyle(fontWeight: FontWeight.bold))),
-                  DataColumn(label: Text("Action", style: TextStyle(fontWeight: FontWeight.bold))),
-                ],
-                rows: filteredPayments.map((payment) {
-                  return _buildRow(payment);
-                }).toList(),
-              ),
-            );
-          }
-        ),
+          );
+        }
       ),
     );
   }

@@ -905,7 +905,7 @@ class _MemDBState extends State<EncoderLoanPayRec> {
                                         padding: const EdgeInsets.only(bottom: 8.0, left: 8.0),
                                         child: Text('Loaded loans: ${loans.length}', style: TextStyle(color: Colors.grey)),
                                       ),
-                                      SizedBox.expand(child: loansTable(filteredLoans))
+                                      Expanded(child: loansTable(filteredLoans))
                                     ],
                                   ),
 
@@ -915,7 +915,7 @@ class _MemDBState extends State<EncoderLoanPayRec> {
                                     children: [
                                       payFilters(),
                                       SizedBox(height: 24),
-                                      SizedBox.expand(child: payTable(filteredPayments)),
+                                      Expanded(child: payTable(filteredPayments)),
                                     ],
                                   ),
                                 ],
