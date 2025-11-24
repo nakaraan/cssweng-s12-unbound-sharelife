@@ -6,6 +6,7 @@ import 'package:the_basics/core/widgets/export_dropdown_button.dart';
 import 'package:the_basics/core/utils/export_service.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:the_basics/core/utils/themes.dart';
 
 class EncoderReports extends StatefulWidget {
   const EncoderReports({super.key});
@@ -973,8 +974,14 @@ class _EncoderReportsState extends State<EncoderReports> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFEFEFEF),
-      body: Column(
+      body: Container(
+    decoration: BoxDecoration(
+      image: DecorationImage(
+        image: AssetImage("assets/imgs/bg_in.png"),
+        fit: BoxFit.cover,
+      ),
+    ),
+    child: Column(
         children: [
 
           // top nav bar
@@ -1004,11 +1011,12 @@ class _EncoderReportsState extends State<EncoderReports> {
                           const Text(
                             "Reports Dashboard",
                             style: TextStyle(fontSize: 28, 
-                            fontWeight: FontWeight.bold),
+                            fontWeight: FontWeight.bold,
+                            color: AppThemes.pageTitle),
                           ),
                           const Text(
                             "Review various types of reports.",
-                            style: TextStyle(color: Colors.grey, fontSize: 14),
+                            style: TextStyle(color: AppThemes.pageSubtitle, fontSize: 14),
                           ),
                           SizedBox(height: 24),
 
@@ -1097,6 +1105,7 @@ class _EncoderReportsState extends State<EncoderReports> {
           ),
         ],
       ),
+    )
     );
   }
 }

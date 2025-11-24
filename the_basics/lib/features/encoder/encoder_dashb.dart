@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:the_basics/core/widgets/top_navbar.dart';
 import 'package:the_basics/core/widgets/side_menu.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:the_basics/core/utils/themes.dart';
 
 class EncoderDashboard extends StatefulWidget {
   const EncoderDashboard({super.key});
@@ -88,8 +89,14 @@ class _EncoderDashboardState extends State<EncoderDashboard> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFFEFEFEF),
-      body: Column(
+      body: Container(
+    decoration: BoxDecoration(
+      image: DecorationImage(
+        image: AssetImage("assets/imgs/bg_in.png"),
+        fit: BoxFit.cover,
+      ),
+    ),
+    child: Column(
         children: [
           TopNavBar(splash: "Encoder"),
           Expanded(
@@ -108,7 +115,7 @@ class _EncoderDashboardState extends State<EncoderDashboard> {
                         children: [
                           Text(
                             "Overview",
-                            style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+                            style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: AppThemes.pageTitle),
                           ),
                           SizedBox(height: 24),
                           _isLoading
@@ -153,6 +160,7 @@ class _EncoderDashboardState extends State<EncoderDashboard> {
           ),
         ],
       ),
+    )
     );
   }
 }
@@ -175,7 +183,7 @@ class SummaryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       elevation: 2,
-      color: Colors.white,
+      color: AppThemes.lightcreme,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: EdgeInsets.all(20),

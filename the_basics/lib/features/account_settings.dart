@@ -174,8 +174,14 @@ class _AccountSettingsState extends State<AccountSettings> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFEFEFEF),
-      body: Column(
+      body: Container(
+        decoration: BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage("assets/imgs/bg_settings.png"),
+            fit: BoxFit.cover,
+          ),
+        ),
+        child: Column(
         children: [
 
           // Top Navbar things
@@ -210,6 +216,7 @@ class _AccountSettingsState extends State<AccountSettings> {
           ),
         ],
       ),
+    )
     );
   }
 }

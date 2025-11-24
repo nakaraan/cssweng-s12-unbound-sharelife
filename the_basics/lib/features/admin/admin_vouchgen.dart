@@ -520,7 +520,7 @@ class _AdminFinanceManagementState extends State<AdminFinanceManagement> with Si
           children: [
             Text("Particulars", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             IconButton(
-              icon: Icon(Icons.add_circle, color: Colors.blue),
+              icon: Icon(Icons.add_circle, color: AppThemes.green),
               onPressed: _addParticularsRow,
             ),
           ],
@@ -575,7 +575,7 @@ class _AdminFinanceManagementState extends State<AdminFinanceManagement> with Si
           children: [
             Text("Account Title", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             IconButton(
-              icon: Icon(Icons.add_circle, color: Colors.blue),
+              icon: Icon(Icons.add_circle, color: AppThemes.green),
               onPressed: _addAccountRow,
             ),
           ],

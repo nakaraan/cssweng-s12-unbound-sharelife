@@ -6,6 +6,8 @@ import 'package:the_basics/core/widgets/export_dropdown_button.dart';
 import 'package:the_basics/core/utils/export_service.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:the_basics/core/utils/themes.dart';
+
 
 class EncoderPaymentForm extends StatefulWidget {
   const EncoderPaymentForm({super.key});
@@ -503,8 +505,14 @@ class _EncoderPaymentFormState extends State<EncoderPaymentForm> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFEFEFEF),
-      body: Column(
+      body: Container(
+    decoration: BoxDecoration(
+      image: DecorationImage(
+        image: AssetImage("assets/imgs/bg_in.png"),
+        fit: BoxFit.cover,
+      ),
+    ),
+    child: Column(
         children: [
 
           // top nav bar
@@ -534,11 +542,12 @@ class _EncoderPaymentFormState extends State<EncoderPaymentForm> {
                           const Text(
                             "Payment Form",
                             style: TextStyle(fontSize: 28, 
-                            fontWeight: FontWeight.bold),
+                            fontWeight: FontWeight.bold,
+                            color: AppThemes.pageTitle),
                           ),
                           const Text(
                             "Encode a Payment",
-                            style: TextStyle(color: Colors.grey, fontSize: 14),
+                            style: TextStyle(color: AppThemes.pageSubtitle, fontSize: 14),
                           ),
 
                           // download button
@@ -590,11 +599,11 @@ class _EncoderPaymentFormState extends State<EncoderPaymentForm> {
                                             )
                                           : const Text(
                                               "Submit Payment",
-                                              style: TextStyle(color: Colors.white),
+                                              style: TextStyle(color: AppThemes.buttonText),
                                             ),
                                       style: ElevatedButton.styleFrom(
                                         padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 24),
-                                        backgroundColor: Colors.black,
+                                        backgroundColor: AppThemes.outerformButton,
                                         minimumSize: const Size(100, 28),
                                       ),
                                     ),
@@ -620,6 +629,7 @@ class _EncoderPaymentFormState extends State<EncoderPaymentForm> {
         ],
       ),
       
+    )
     );
   }
 

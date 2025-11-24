@@ -6,6 +6,7 @@ class AppThemes{
   static const Color lightorange = Color(0xFFFFC6A0);
   static const Color orange = Color(0xFFf78a43);
   static const Color lightgreen = Color(0xFFC8D26A);
+  static const Color green = Color.fromRGBO(69, 133, 74, 1);
   static const Color darkgreen = Color(0xFF1e3f20);
   static const Color brown = Color(0xFF3c2412);
   static const Color creme = Color(0xFFf5f2ea);
