@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:the_basics/core/widgets/top_navbar.dart';
 import 'package:the_basics/core/widgets/side_menu.dart';
 import 'package:the_basics/core/widgets/export_dropdown_button.dart';
@@ -57,6 +58,7 @@ class _AdminFinanceManagementState extends State<AdminFinanceManagement> with Si
   List<Map<String, dynamic>> vouchers = [];
   List<Map<String, dynamic>> filteredVouchers = [];
   bool isLoadingVouchers = false;
+  String? vouchersError;
 
   @override
   void initState() {
@@ -198,6 +200,17 @@ class _AdminFinanceManagementState extends State<AdminFinanceManagement> with Si
         missingFields.add('At least one Particular entry');
       }
       
+      // Validate that each particular row has both fields filled if either is filled
+      for (int i = 0; i < particularsRows.length; i++) {
+        String particular = particularsRows[i]['particular'].text.trim();
+        String amount = particularsRows[i]['amount'].text.trim();
+        
+        if ((particular.isNotEmpty && amount.isEmpty) || 
+            (particular.isEmpty && amount.isNotEmpty)) {
+          missingFields.add('Particular row ${i + 1}: Both particular and amount must be filled');
+        }
+      }
+      
       // Validate account rows (at least one row)
       if (accountRows.isEmpty || 
           (accountRows.length == 1 && 
@@ -205,6 +218,17 @@ class _AdminFinanceManagementState extends State<AdminFinanceManagement> with Si
            accountRows[0]['debit'].text.isEmpty && 
            accountRows[0]['credit'].text.isEmpty)) {
         missingFields.add('At least one Account entry');
+      }
+      
+      // Validate that account title is filled if debit or credit has value
+      for (int i = 0; i < accountRows.length; i++) {
+        String title = accountRows[i]['title'].text.trim();
+        String debit = accountRows[i]['debit'].text.trim();
+        String credit = accountRows[i]['credit'].text.trim();
+        
+        if ((debit.isNotEmpty || credit.isNotEmpty) && title.isEmpty) {
+          missingFields.add('Account row ${i + 1}: Title must be filled when debit or credit has value');
+        }
       }
       
       // Validate checked_by fields (name, signature, date)
@@ -334,10 +358,13 @@ class _AdminFinanceManagementState extends State<AdminFinanceManagement> with Si
       });
     } catch (e) {
       print('Error fetching vouchers: $e');
+      setState(() {
+        vouchersError = e.toString();
+        isLoadingVouchers = false;
+      });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error loading vouchers: $e'), backgroundColor: Colors.red),
       );
-      setState(() => isLoadingVouchers = false);
     }
   }
 
@@ -580,6 +607,10 @@ class _AdminFinanceManagementState extends State<AdminFinanceManagement> with Si
                 Expanded(
                   child: TextField(
                     controller: row['debit'],
+                    keyboardType: TextInputType.numberWithOptions(decimal: true),
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                    ],
                     decoration: InputDecoration(
                       labelText: "Debit",
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
@@ -591,6 +622,10 @@ class _AdminFinanceManagementState extends State<AdminFinanceManagement> with Si
                 Expanded(
                   child: TextField(
                     controller: row['credit'],
+                    keyboardType: TextInputType.numberWithOptions(decimal: true),
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                    ],
                     decoration: InputDecoration(
                       labelText: "Credit",
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
@@ -701,48 +736,77 @@ class _AdminFinanceManagementState extends State<AdminFinanceManagement> with Si
   }
 
   Widget vouchSearchTable() {
-    return Column(
-      children: [
-        Expanded(
-          child: Container(
-            width: double.infinity,
-            padding: EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(8),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 8,
-                  offset: Offset(0, 2),
-                ),
-              ],
-            ),
-            child: isLoadingVouchers
-                ? Center(child: CircularProgressIndicator())
-                : SingleChildScrollView(
-                    child: DataTable(
-                      columns: [
-                        DataColumn(label: Text("Voucher ID", style: TextStyle(fontWeight: FontWeight.bold))),
-                        DataColumn(label: Text("Reference #", style: TextStyle(fontWeight: FontWeight.bold))),
-                        DataColumn(label: Text("Pay To", style: TextStyle(fontWeight: FontWeight.bold))),
-                        DataColumn(label: Text("Amount", style: TextStyle(fontWeight: FontWeight.bold))),
-                        DataColumn(label: Text("Date Issued", style: TextStyle(fontWeight: FontWeight.bold))),
-                      ],
-                      rows: filteredVouchers.map((voucher) {
-                        return DataRow(cells: [
-                          DataCell(Text(voucher['voucher_id'] ?? '')),
-                          DataCell(Text(voucher['ref_number'] ?? '')),
-                          DataCell(Text(voucher['pay_to'] ?? '')),
-                          DataCell(Text((voucher['received_sum'] ?? 0).toString())),
-                          DataCell(Text(voucher['date_issued'] ?? '')),
-                        ]);
-                      }).toList(),
-                    ),
-                  ),
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: Offset(0, 2),
           ),
-        ),
-      ],
+        ],
+      ),
+      child: () {
+        // compute content in a local variable to avoid complex nested conditional expressions
+        Widget content;
+        if (isLoadingVouchers) {
+          content = Center(child: CircularProgressIndicator());
+        } else if (vouchersError != null) {
+          content = Center(
+            child: Text(
+              'Error loading vouchers: ${vouchersError}',
+              style: TextStyle(color: Colors.red),
+            ),
+          );
+        } else if (filteredVouchers.isEmpty) {
+          content = Center(child: Text('No vouchers found'));
+        } else {
+          content = SingleChildScrollView(
+            child: Builder(builder: (context) {
+              try {
+                final rows = filteredVouchers.map((voucher) {
+                  return DataRow(cells: [
+                    DataCell(Text(voucher['voucher_id']?.toString() ?? '')),
+                    DataCell(Text(voucher['ref_number']?.toString() ?? '')),
+                    DataCell(Text(voucher['pay_to']?.toString() ?? '')),
+                    DataCell(Text((voucher['received_sum'] ?? 0).toString())),
+                    DataCell(Text(voucher['date_issued']?.toString() ?? '')),
+                  ]);
+                }).toList();
+
+                return DataTable(
+                  columns: [
+                    DataColumn(label: Text("Voucher ID", style: TextStyle(fontWeight: FontWeight.bold))),
+                    DataColumn(label: Text("Reference #", style: TextStyle(fontWeight: FontWeight.bold))),
+                    DataColumn(label: Text("Pay To", style: TextStyle(fontWeight: FontWeight.bold))),
+                    DataColumn(label: Text("Amount", style: TextStyle(fontWeight: FontWeight.bold))),
+                    DataColumn(label: Text("Date Issued", style: TextStyle(fontWeight: FontWeight.bold))),
+                  ],
+                  rows: rows,
+                );
+              } catch (e, st) {
+                debugPrint('Error building voucher rows: $e\n$st');
+                return Container(
+                  padding: EdgeInsets.all(16),
+                  child: Column(
+                    children: [
+                      Text('Error rendering vouchers', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                      SizedBox(height: 8),
+                      Text(e.toString()),
+                    ],
+                  ),
+                );
+              }
+            }),
+          );
+        }
+
+        return content;
+      }(),
     );
   }
 
@@ -977,7 +1041,8 @@ class _AdminFinanceManagementState extends State<AdminFinanceManagement> with Si
 
 
                               // TAB 2: VOUCHER SEARCH
-                              Expanded(
+                              // Use a scrollable column instead of Expanded inside TabBarView
+                              SingleChildScrollView(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.stretch,
                                   children: [
@@ -987,7 +1052,8 @@ class _AdminFinanceManagementState extends State<AdminFinanceManagement> with Si
                                     SizedBox(height: 24),
 
                                     // Vouchers Table
-                                    Expanded(child: vouchSearchTable(),),
+                                    // vouchSearchTable handles its own scrolling; don't wrap with Expanded here
+                                    vouchSearchTable(),
                                   ],
                                 ),
                               ),

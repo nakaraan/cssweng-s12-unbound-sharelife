@@ -32,6 +32,12 @@ class _AdminReportsState extends State<AdminReports> {
   List<Map<String, dynamic>> _memberLoansData = [];
   List<Map<String, dynamic>> _paymentCollectionData = [];
   Map<String, dynamic> _voucherRevenueData = {};
+  // Filtered views (based on the "Filter by..." selector)
+  String? selectedTimeFilter;
+  List<Map<String, dynamic>> _filteredActiveLoans = [];
+  List<Map<String, dynamic>> _filteredOverdueLoans = [];
+  List<Map<String, dynamic>> _filteredMemberLoans = [];
+  List<Map<String, dynamic>> _filteredPaymentCollection = [];
 
   @override
   void initState() {
@@ -48,6 +54,44 @@ class _AdminReportsState extends State<AdminReports> {
       _fetchPaymentCollections(),
       _fetchVoucherRevenue(),
     ]);
+    _applyTimeFilter();
+  }
+
+  void _applyTimeFilter() {
+    // If no filter selected, show original lists
+    if (selectedTimeFilter == null || selectedTimeFilter!.isEmpty) {
+      setState(() {
+        _filteredActiveLoans = List.from(_activeLoansData);
+        _filteredOverdueLoans = List.from(_overdueLoansData);
+        _filteredMemberLoans = List.from(_memberLoansData);
+        _filteredPaymentCollection = List.from(_paymentCollectionData);
+      });
+      return;
+    }
+
+    final now = DateTime.now();
+    bool withinFilter(String? dateStr) {
+      if (dateStr == null || dateStr.isEmpty || dateStr == '-') return false;
+      final parsed = DateTime.tryParse(dateStr);
+      if (parsed == null) return false;
+
+      if (selectedTimeFilter == 'Month') {
+        return parsed.year == now.year && parsed.month == now.month;
+      } else if (selectedTimeFilter == 'Quarter') {
+        int q(int m) => ((m - 1) ~/ 3) + 1;
+        return parsed.year == now.year && q(parsed.month) == q(now.month);
+      } else if (selectedTimeFilter == 'Year') {
+        return parsed.year == now.year;
+      }
+      return true;
+    }
+
+    setState(() {
+      _filteredActiveLoans = _activeLoansData.where((r) => withinFilter(r['startDate'] as String?)).toList();
+      _filteredOverdueLoans = _overdueLoansData.where((r) => withinFilter(r['dueDate'] as String?)).toList();
+      _filteredMemberLoans = _memberLoansData.where((r) => withinFilter(r['lastPaid'] as String?)).toList();
+      _filteredPaymentCollection = _paymentCollectionData.where((r) => withinFilter(r['payDate'] as String?)).toList();
+    });
   }
 
   Future<void> _fetchActiveLoans() async {
@@ -387,6 +431,12 @@ class _AdminReportsState extends State<AdminReports> {
               "Quarter",
               "Year",
             ],
+            onChanged: (value) {
+              setState(() {
+                selectedTimeFilter = value;
+              });
+              _applyTimeFilter();
+            },
           ),
         ),
         SizedBox(width: 16),
@@ -402,9 +452,10 @@ class _AdminReportsState extends State<AdminReports> {
             List<String> columnOrder = [];
             Map<String, String> columnHeaders = {};
             
-            // Determine which report is currently selected
-            if (selectedReportType == 'Active Loans') {
-              reportData = _activeLoansData;
+            // Determine which report is currently selected (normalize value)
+            final _sel = selectedReportType?.trim().toLowerCase();
+            if (_sel == 'active loans') {
+              reportData = _filteredActiveLoans;
               reportTitle = 'Active Loans Report';
               columnOrder = ['loanID', 'memName', 'loanType', 'startDate', 'dueDate', 'principalAmt', 'remainBal'];
               columnHeaders = {
@@ -416,8 +467,8 @@ class _AdminReportsState extends State<AdminReports> {
                 'principalAmt': 'Principal Amount',
                 'remainBal': 'Remaining Balance',
               };
-            } else if (selectedReportType == 'Overdue Loans') {
-              reportData = _overdueLoansData;
+            } else if (_sel == 'overdue loans') {
+              reportData = _filteredOverdueLoans;
               reportTitle = 'Overdue Loans Report';
               columnOrder = ['loanID', 'memName', 'contactNo', 'daysOverdue', 'amountDue', 'lateFees'];
               columnHeaders = {
@@ -428,8 +479,8 @@ class _AdminReportsState extends State<AdminReports> {
                 'amountDue': 'Amount Due',
                 'lateFees': 'Late Fees',
               };
-            } else if (selectedReportType == 'Member Loan Summary') {
-              reportData = _memberLoansData;
+            } else if (_sel == 'member loan summary') {
+              reportData = _filteredMemberLoans;
               reportTitle = 'Member Loan Summary';
               columnOrder = ['memName', 'memID', 'totalLoans', 'totalBorrowed', 'totalPaid', 'outBal', 'loanStatus'];
               columnHeaders = {
@@ -441,8 +492,8 @@ class _AdminReportsState extends State<AdminReports> {
                 'outBal': 'Outstanding Balance',
                 'loanStatus': 'Status',
               };
-            } else if (selectedReportType == 'Payment Collection') {
-              reportData = _paymentCollectionData;
+            } else if (_sel == 'payment collection') {
+              reportData = _filteredPaymentCollection;
               reportTitle = 'Payment Collections Report';
               columnOrder = ['payDate', 'memName', 'amountPaid', 'payMethod', 'loanID'];
               columnHeaders = {
@@ -452,6 +503,19 @@ class _AdminReportsState extends State<AdminReports> {
                 'payMethod': 'Payment Method',
                 'loanID': 'Loan ID',
               };
+            } else if (_sel == 'voucher & revenue summary' || _sel == 'voucher and revenue summary') {
+              reportTitle = 'Voucher & Revenue Summary';
+              columnOrder = ['metric', 'value'];
+              columnHeaders = {'metric': 'Metric', 'value': 'Value'};
+              reportData = [
+                {'metric': 'Total Loans Approved', 'value': _voucherRevenueData['totalLoansApproved'] ?? '0'},
+                {'metric': 'Total Disbursed', 'value': ExportService.safeCurrency(_voucherRevenueData['totalDisbursed'])},
+                {'metric': 'Total Payments Received', 'value': ExportService.safeCurrency(_voucherRevenueData['totalPaymentsReceived'])},
+                {'metric': 'Total Amount Paid', 'value': ExportService.safeCurrency(_voucherRevenueData['totalAmountPaid'])},
+                {'metric': 'Total Outstanding', 'value': ExportService.safeCurrency(_voucherRevenueData['totalOutstanding'])},
+                {'metric': 'Total Overdue', 'value': ExportService.safeCurrency(_voucherRevenueData['totalOverdue'])},
+                {'metric': 'Total Interest Earned', 'value': ExportService.safeCurrency(_voucherRevenueData['totalInterestEarned'])},
+              ];
             } else {
               ExportService.showExportMessage(context, 'Please select a report type first');
               return;
@@ -472,9 +536,10 @@ class _AdminReportsState extends State<AdminReports> {
             List<String> columnOrder = [];
             Map<String, String> columnHeaders = {};
             
-            // Determine which report is currently selected
-            if (selectedReportType == 'Active Loans') {
-              reportData = _activeLoansData;
+            // Determine which report is currently selected (normalize value)
+            final _sel2 = selectedReportType?.trim().toLowerCase();
+            if (_sel2 == 'active loans') {
+              reportData = _filteredActiveLoans;
               reportTitle = 'Active Loans Report';
               columnOrder = ['loanID', 'memName', 'loanType', 'startDate', 'dueDate', 'principalAmt', 'remainBal'];
               columnHeaders = {
@@ -486,8 +551,8 @@ class _AdminReportsState extends State<AdminReports> {
                 'principalAmt': 'Principal Amount',
                 'remainBal': 'Remaining Balance',
               };
-            } else if (selectedReportType == 'Overdue Loans') {
-              reportData = _overdueLoansData;
+            } else if (_sel2 == 'overdue loans') {
+              reportData = _filteredOverdueLoans;
               reportTitle = 'Overdue Loans Report';
               columnOrder = ['loanID', 'memName', 'contactNo', 'daysOverdue', 'amountDue', 'lateFees'];
               columnHeaders = {
@@ -498,8 +563,8 @@ class _AdminReportsState extends State<AdminReports> {
                 'amountDue': 'Amount Due',
                 'lateFees': 'Late Fees',
               };
-            } else if (selectedReportType == 'Member Loan Summary') {
-              reportData = _memberLoansData;
+            } else if (_sel2 == 'member loan summary') {
+              reportData = _filteredMemberLoans;
               reportTitle = 'Member Loan Summary';
               columnOrder = ['memName', 'memID', 'totalLoans', 'totalBorrowed', 'totalPaid', 'outBal', 'loanStatus'];
               columnHeaders = {
@@ -511,8 +576,8 @@ class _AdminReportsState extends State<AdminReports> {
                 'outBal': 'Outstanding Balance',
                 'loanStatus': 'Status',
               };
-            } else if (selectedReportType == 'Payment Collection') {
-              reportData = _paymentCollectionData;
+            } else if (_sel2 == 'payment collection') {
+              reportData = _filteredPaymentCollection;
               reportTitle = 'Payment Collections Report';
               columnOrder = ['payDate', 'memName', 'amountPaid', 'payMethod', 'loanID'];
               columnHeaders = {
@@ -522,6 +587,19 @@ class _AdminReportsState extends State<AdminReports> {
                 'payMethod': 'Payment Method',
                 'loanID': 'Loan ID',
               };
+            } else if (_sel2 == 'voucher & revenue summary' || _sel2 == 'voucher and revenue summary') {
+              reportTitle = 'Voucher & Revenue Summary';
+              columnOrder = ['metric', 'value'];
+              columnHeaders = {'metric': 'Metric', 'value': 'Value'};
+              reportData = [
+                {'metric': 'Total Loans Approved', 'value': _voucherRevenueData['totalLoansApproved'] ?? '0'},
+                {'metric': 'Total Disbursed', 'value': ExportService.safeCurrency(_voucherRevenueData['totalDisbursed'])},
+                {'metric': 'Total Payments Received', 'value': ExportService.safeCurrency(_voucherRevenueData['totalPaymentsReceived'])},
+                {'metric': 'Total Amount Paid', 'value': ExportService.safeCurrency(_voucherRevenueData['totalAmountPaid'])},
+                {'metric': 'Total Outstanding', 'value': ExportService.safeCurrency(_voucherRevenueData['totalOutstanding'])},
+                {'metric': 'Total Overdue', 'value': ExportService.safeCurrency(_voucherRevenueData['totalOverdue'])},
+                {'metric': 'Total Interest Earned', 'value': ExportService.safeCurrency(_voucherRevenueData['totalInterestEarned'])},
+              ];
             } else {
               ExportService.showExportMessage(context, 'Please select a report type first');
               return;
@@ -935,21 +1013,21 @@ class _AdminReportsState extends State<AdminReports> {
                                       if (_isLoading)
                                         const Center(child: CircularProgressIndicator())
                                       else if (selectedReportType == "Active Loans")
-                                        _activeLoansData.isEmpty 
+                                        _filteredActiveLoans.isEmpty 
                                           ? _emptyState('No active loans found')
-                                          : activeLoansTable(_activeLoansData)
+                                          : activeLoansTable(_filteredActiveLoans)
                                       else if (selectedReportType == "Overdue Loans")
-                                        _overdueLoansData.isEmpty
+                                        _filteredOverdueLoans.isEmpty
                                           ? _emptyState('No overdue loans found')
-                                          : overdueLoansTable(_overdueLoansData)
+                                          : overdueLoansTable(_filteredOverdueLoans)
                                       else if (selectedReportType == "Member Loan Summary")
-                                        _memberLoansData.isEmpty
+                                        _filteredMemberLoans.isEmpty
                                           ? _emptyState('No member loan data found')
-                                          : memberLoansTable(_memberLoansData)
+                                          : memberLoansTable(_filteredMemberLoans)
                                       else if (selectedReportType == "Payment Collection")
-                                        _paymentCollectionData.isEmpty
+                                        _filteredPaymentCollection.isEmpty
                                           ? _emptyState('No payment collections found')
-                                          : payCollectionTable(_paymentCollectionData)
+                                          : payCollectionTable(_filteredPaymentCollection)
                                       else if (selectedReportType == "Missed Payments")
                                         _emptyState('Missed Payments feature coming soon')
                                       else if (selectedReportType == "Voucher & Revenue Summary")

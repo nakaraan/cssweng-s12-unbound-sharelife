@@ -21,6 +21,7 @@ class _EncoderReportsState extends State<EncoderReports> {
   int? sortColumnIndex;
   bool isAscending = true;
   String? selectedReportType;
+  String? selectedTimeFilter; // Month, Quarter, Year
   double buttonHeight = 28;
 
   // Loading states
@@ -32,6 +33,12 @@ class _EncoderReportsState extends State<EncoderReports> {
   List<Map<String, dynamic>> _memberLoansData = [];
   List<Map<String, dynamic>> _paymentCollectionData = [];
   Map<String, dynamic> _voucherRevenueData = {};
+
+  // Filtered data
+  List<Map<String, dynamic>> _filteredActiveLoans = [];
+  List<Map<String, dynamic>> _filteredOverdueLoans = [];
+  List<Map<String, dynamic>> _filteredMemberLoans = [];
+  List<Map<String, dynamic>> _filteredPaymentCollection = [];
 
   @override
   void initState() {
@@ -80,6 +87,7 @@ class _EncoderReportsState extends State<EncoderReports> {
             'remainBal': (loan['outstanding_balance'] ?? 0).toString(),
           };
         }).toList();
+        _filteredActiveLoans = List.from(_activeLoansData);
       });
     } catch (e) {
       debugPrint('Error fetching active loans: $e');
@@ -354,6 +362,67 @@ class _EncoderReportsState extends State<EncoderReports> {
     return dueDate.toString().split(' ')[0];
   }
 
+  void _applyTimeFilter() {
+    if (!mounted) return;
+    if (selectedTimeFilter == null) {
+      // No filter, show all
+      setState(() {
+        _filteredActiveLoans = List.from(_activeLoansData);
+        _filteredOverdueLoans = List.from(_overdueLoansData);
+        _filteredMemberLoans = List.from(_memberLoansData);
+        _filteredPaymentCollection = List.from(_paymentCollectionData);
+      });
+      return;
+    }
+
+    final now = DateTime.now();
+    DateTime startDate;
+    DateTime endDate = now;
+
+    if (selectedTimeFilter == 'Month') {
+      startDate = DateTime(now.year, now.month, 1);
+    } else if (selectedTimeFilter == 'Quarter') {
+      final quarterMonth = ((now.month - 1) ~/ 3) * 3 + 1;
+      startDate = DateTime(now.year, quarterMonth, 1);
+    } else if (selectedTimeFilter == 'Year') {
+      startDate = DateTime(now.year, 1, 1);
+    } else {
+      return;
+    }
+
+    setState(() {
+      // Filter active loans by start date
+      _filteredActiveLoans = _activeLoansData.where((loan) {
+        final dateStr = loan['startDate']?.toString();
+        if (dateStr == null) return false;
+        final date = DateTime.tryParse(dateStr);
+        if (date == null) return false;
+        return date.isAfter(startDate.subtract(Duration(days: 1))) && date.isBefore(endDate.add(Duration(days: 1)));
+      }).toList();
+
+      // Filter overdue loans by due date
+      _filteredOverdueLoans = _overdueLoansData.where((loan) {
+        final dateStr = loan['dueDate']?.toString();
+        if (dateStr == null) return false;
+        final date = DateTime.tryParse(dateStr);
+        if (date == null) return false;
+        return date.isAfter(startDate.subtract(Duration(days: 1))) && date.isBefore(endDate.add(Duration(days: 1)));
+      }).toList();
+
+      // Member loans summary doesn't have a date field typically, so show all
+      _filteredMemberLoans = List.from(_memberLoansData);
+
+      // Filter payment collection by payment date
+      _filteredPaymentCollection = _paymentCollectionData.where((payment) {
+        final dateStr = payment['payDate']?.toString();
+        if (dateStr == null || dateStr == '-') return false;
+        final date = DateTime.tryParse(dateStr);
+        if (date == null) return false;
+        return date.isAfter(startDate.subtract(Duration(days: 1))) && date.isBefore(endDate.add(Duration(days: 1)));
+      }).toList();
+    });
+  }
+
   Widget buttonsAndFiltersRow() {
     return Row(
       children: [
@@ -387,6 +456,12 @@ class _EncoderReportsState extends State<EncoderReports> {
               "Quarter",
               "Year",
             ],
+            onChanged: (value) {
+              setState(() {
+                selectedTimeFilter = value;
+                _applyTimeFilter();
+              });
+            },
           ),
         ),
         SizedBox(width: 16),
@@ -402,9 +477,10 @@ class _EncoderReportsState extends State<EncoderReports> {
             List<String> columnOrder = [];
             Map<String, String> columnHeaders = {};
             
-            // Determine which report is currently selected
-            if (selectedReportType == 'Active Loans') {
-              reportData = _activeLoansData;
+            // Determine which report is currently selected (normalize value)
+            final _sel = selectedReportType?.trim().toLowerCase();
+            if (_sel == 'active loans') {
+              reportData = _filteredActiveLoans;
               reportTitle = 'Active Loans Report';
               columnOrder = ['loanID', 'memName', 'loanType', 'startDate', 'dueDate', 'principalAmt', 'remainBal'];
               columnHeaders = {
@@ -416,8 +492,8 @@ class _EncoderReportsState extends State<EncoderReports> {
                 'principalAmt': 'Principal Amount',
                 'remainBal': 'Remaining Balance',
               };
-            } else if (selectedReportType == 'Overdue Loans') {
-              reportData = _overdueLoansData;
+            } else if (_sel == 'overdue loans') {
+              reportData = _filteredOverdueLoans;
               reportTitle = 'Overdue Loans Report';
               columnOrder = ['loanID', 'memName', 'contactNo', 'daysOverdue', 'amountDue', 'lateFees'];
               columnHeaders = {
@@ -428,8 +504,8 @@ class _EncoderReportsState extends State<EncoderReports> {
                 'amountDue': 'Amount Due',
                 'lateFees': 'Late Fees',
               };
-            } else if (selectedReportType == 'Member Loan Summary') {
-              reportData = _memberLoansData;
+            } else if (_sel == 'member loan summary') {
+              reportData = _filteredMemberLoans;
               reportTitle = 'Member Loan Summary';
               columnOrder = ['memName', 'memID', 'totalLoans', 'totalBorrowed', 'totalPaid', 'outBal', 'loanStatus'];
               columnHeaders = {
@@ -441,8 +517,8 @@ class _EncoderReportsState extends State<EncoderReports> {
                 'outBal': 'Outstanding Balance',
                 'loanStatus': 'Status',
               };
-            } else if (selectedReportType == 'Payment Collection') {
-              reportData = _paymentCollectionData;
+            } else if (_sel == 'payment collection') {
+              reportData = _filteredPaymentCollection;
               reportTitle = 'Payment Collections Report';
               columnOrder = ['payDate', 'memName', 'amountPaid', 'payMethod', 'loanID'];
               columnHeaders = {
@@ -452,6 +528,20 @@ class _EncoderReportsState extends State<EncoderReports> {
                 'payMethod': 'Payment Method',
                 'loanID': 'Loan ID',
               };
+            } else if (_sel == 'voucher & revenue summary' || _sel == 'voucher and revenue summary') {
+              // Build a small key/value table for the voucher/revenue summary
+              reportTitle = 'Voucher & Revenue Summary';
+              columnOrder = ['metric', 'value'];
+              columnHeaders = {'metric': 'Metric', 'value': 'Value'};
+              reportData = [
+                {'metric': 'Total Loans Approved', 'value': _voucherRevenueData['totalLoansApproved'] ?? '0'},
+                {'metric': 'Total Disbursed', 'value': ExportService.safeCurrency(_voucherRevenueData['totalDisbursed'])},
+                {'metric': 'Total Payments Received', 'value': ExportService.safeCurrency(_voucherRevenueData['totalPaymentsReceived'])},
+                {'metric': 'Total Amount Paid', 'value': ExportService.safeCurrency(_voucherRevenueData['totalAmountPaid'])},
+                {'metric': 'Total Outstanding', 'value': ExportService.safeCurrency(_voucherRevenueData['totalOutstanding'])},
+                {'metric': 'Total Overdue', 'value': ExportService.safeCurrency(_voucherRevenueData['totalOverdue'])},
+                {'metric': 'Total Interest Earned', 'value': ExportService.safeCurrency(_voucherRevenueData['totalInterestEarned'])},
+              ];
             } else {
               ExportService.showExportMessage(context, 'Please select a report type first');
               return;
@@ -472,9 +562,10 @@ class _EncoderReportsState extends State<EncoderReports> {
             List<String> columnOrder = [];
             Map<String, String> columnHeaders = {};
             
-            // Determine which report is currently selected
-            if (selectedReportType == 'Active Loans') {
-              reportData = _activeLoansData;
+            // Determine which report is currently selected (normalize value)
+            final _sel2 = selectedReportType?.trim().toLowerCase();
+            if (_sel2 == 'active loans') {
+              reportData = _filteredActiveLoans;
               reportTitle = 'Active Loans Report';
               columnOrder = ['loanID', 'memName', 'loanType', 'startDate', 'dueDate', 'principalAmt', 'remainBal'];
               columnHeaders = {
@@ -486,8 +577,8 @@ class _EncoderReportsState extends State<EncoderReports> {
                 'principalAmt': 'Principal Amount',
                 'remainBal': 'Remaining Balance',
               };
-            } else if (selectedReportType == 'Overdue Loans') {
-              reportData = _overdueLoansData;
+            } else if (_sel2 == 'overdue loans') {
+              reportData = _filteredOverdueLoans;
               reportTitle = 'Overdue Loans Report';
               columnOrder = ['loanID', 'memName', 'contactNo', 'daysOverdue', 'amountDue', 'lateFees'];
               columnHeaders = {
@@ -498,8 +589,8 @@ class _EncoderReportsState extends State<EncoderReports> {
                 'amountDue': 'Amount Due',
                 'lateFees': 'Late Fees',
               };
-            } else if (selectedReportType == 'Member Loan Summary') {
-              reportData = _memberLoansData;
+            } else if (_sel2 == 'member loan summary') {
+              reportData = _filteredMemberLoans;
               reportTitle = 'Member Loan Summary';
               columnOrder = ['memName', 'memID', 'totalLoans', 'totalBorrowed', 'totalPaid', 'outBal', 'loanStatus'];
               columnHeaders = {
@@ -511,8 +602,8 @@ class _EncoderReportsState extends State<EncoderReports> {
                 'outBal': 'Outstanding Balance',
                 'loanStatus': 'Status',
               };
-            } else if (selectedReportType == 'Payment Collection') {
-              reportData = _paymentCollectionData;
+            } else if (_sel2 == 'payment collection') {
+              reportData = _filteredPaymentCollection;
               reportTitle = 'Payment Collections Report';
               columnOrder = ['payDate', 'memName', 'amountPaid', 'payMethod', 'loanID'];
               columnHeaders = {
@@ -522,6 +613,20 @@ class _EncoderReportsState extends State<EncoderReports> {
                 'payMethod': 'Payment Method',
                 'loanID': 'Loan ID',
               };
+            } else if (_sel2 == 'voucher & revenue summary' || _sel2 == 'voucher and revenue summary') {
+              // XLSX variant of voucher/revenue summary
+              reportTitle = 'Voucher & Revenue Summary';
+              columnOrder = ['metric', 'value'];
+              columnHeaders = {'metric': 'Metric', 'value': 'Value'};
+              reportData = [
+                {'metric': 'Total Loans Approved', 'value': _voucherRevenueData['totalLoansApproved'] ?? '0'},
+                {'metric': 'Total Disbursed', 'value': ExportService.safeCurrency(_voucherRevenueData['totalDisbursed'])},
+                {'metric': 'Total Payments Received', 'value': ExportService.safeCurrency(_voucherRevenueData['totalPaymentsReceived'])},
+                {'metric': 'Total Amount Paid', 'value': ExportService.safeCurrency(_voucherRevenueData['totalAmountPaid'])},
+                {'metric': 'Total Outstanding', 'value': ExportService.safeCurrency(_voucherRevenueData['totalOutstanding'])},
+                {'metric': 'Total Overdue', 'value': ExportService.safeCurrency(_voucherRevenueData['totalOverdue'])},
+                {'metric': 'Total Interest Earned', 'value': ExportService.safeCurrency(_voucherRevenueData['totalInterestEarned'])},
+              ];
             } else {
               ExportService.showExportMessage(context, 'Please select a report type first');
               return;
@@ -582,36 +687,39 @@ class _EncoderReportsState extends State<EncoderReports> {
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          return SingleChildScrollView(
-            scrollDirection: Axis.vertical,
+          return Scrollbar(
+            thumbVisibility: true,
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: ConstrainedBox(
                 constraints: BoxConstraints(minWidth: constraints.maxWidth),
-                child: DataTable(
-                  sortColumnIndex: sortColumnIndex,
-                  sortAscending: isAscending,
-                  columnSpacing: 58,
-                  columns: [
-                    DataColumn(label: Text("Loan ID", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "loanID")),
-                    DataColumn(label: Text("Member Name", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "memName")),
-                    DataColumn(label: Text("Loan Type", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "loanType")),
-                    DataColumn(label: Text("Start Date", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "startDate")),
-                    DataColumn(label: Text("Due Date", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "dueDate")),
-                    DataColumn(label: Text("Principal Amount", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "principalAmt")),
-                    DataColumn(label: Text("Remaining Balance", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "remainBal")),
-                  ],
-                  rows: loans.map((loan) {
-                    return DataRow(cells: [
-                    DataCell(Text("${loan["loanID"] ?? "-"}")),
-                    DataCell(Text("${loan["memName"] ?? "-"}")),
-                    DataCell(Text("${loan["loanType"] ?? "-"}")),
-                    DataCell(Text("${loan["startDate"] ?? "-"}")),
-                    DataCell(Text("${loan["dueDate"] ?? "-"}")),
-                    DataCell(Text(ExportService.safeCurrency(loan["principalAmt"]))),
-                    DataCell(Text(ExportService.safeCurrency(loan["remainBal"]))),
-                    ]);
-                  }).toList(),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.vertical,
+                  child: DataTable(
+                    sortColumnIndex: sortColumnIndex,
+                    sortAscending: isAscending,
+                    columnSpacing: 58,
+                    columns: [
+                      DataColumn(label: Text("Loan ID", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "loanID")),
+                      DataColumn(label: Text("Member Name", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "memName")),
+                      DataColumn(label: Text("Loan Type", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "loanType")),
+                      DataColumn(label: Text("Start Date", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "startDate")),
+                      DataColumn(label: Text("Due Date", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "dueDate")),
+                      DataColumn(label: Text("Principal Amount", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "principalAmt")),
+                      DataColumn(label: Text("Remaining Balance", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "remainBal")),
+                    ],
+                    rows: loans.map((loan) {
+                      return DataRow(cells: [
+                        DataCell(Text("${loan["loanID"] ?? "-"}")),
+                        DataCell(Text("${loan["memName"] ?? "-"}")),
+                        DataCell(Text("${loan["loanType"] ?? "-"}")),
+                        DataCell(Text("${loan["startDate"] ?? "-"}")),
+                        DataCell(Text("${loan["dueDate"] ?? "-"}")),
+                        DataCell(Text(ExportService.safeCurrency(loan["principalAmt"]))),
+                        DataCell(Text(ExportService.safeCurrency(loan["remainBal"]))),
+                      ]);
+                    }).toList(),
+                  ),
                 ),
               ),
             ),
@@ -633,38 +741,41 @@ class _EncoderReportsState extends State<EncoderReports> {
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          return SingleChildScrollView(
-            scrollDirection: Axis.vertical,
+          return Scrollbar(
+            thumbVisibility: true,
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: ConstrainedBox(
                 constraints: BoxConstraints(minWidth: constraints.maxWidth),
-                child: DataTable(
-                  sortColumnIndex: sortColumnIndex,
-                  sortAscending: isAscending,
-                  columnSpacing: 58,
-                  columns: [
-                    DataColumn(label: Text("Loan ID", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "loanID")),
-                    DataColumn(label: Text("Member Name", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "memName")),
-                    DataColumn(label: Text("Loan Type", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "loanType")),
-                    DataColumn(label: Text("Due Date", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "dueDate")),
-                    DataColumn(label: Text("Days Overdue", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "daysOverdue")),
-                    DataColumn(label: Text("Amount Due", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "amountDue")),
-                    DataColumn(label: Text("Accumulated Late Fees", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "lateFees")),
-                    DataColumn(label: Text("Contact No.", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "contactNo")),
-                  ],
-                  rows: loans.map((loan) {
-                    return DataRow(cells: [
-                      DataCell(Text("${loan["loanID"] ?? "-"}")),
-                      DataCell(Text("${loan["memName"] ?? "-"}")),
-                      DataCell(Text("${loan["loanType"] ?? "-"}")),
-                      DataCell(Text("${loan["dueDate"] ?? "-"}")),
-                      DataCell(Text("${loan["daysOverdue"] ?? "0"}")),
-                      DataCell(Text(ExportService.safeCurrency(loan["amountDue"]))),
-                      DataCell(Text(ExportService.safeCurrency(loan["lateFees"]))),
-                      DataCell(Text("${loan["contactNo"] ?? "-"}")),
-                    ]);
-                  }).toList(),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.vertical,
+                  child: DataTable(
+                    sortColumnIndex: sortColumnIndex,
+                    sortAscending: isAscending,
+                    columnSpacing: 58,
+                    columns: [
+                      DataColumn(label: Text("Loan ID", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "loanID")),
+                      DataColumn(label: Text("Member Name", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "memName")),
+                      DataColumn(label: Text("Loan Type", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "loanType")),
+                      DataColumn(label: Text("Due Date", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "dueDate")),
+                      DataColumn(label: Text("Days Overdue", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "daysOverdue")),
+                      DataColumn(label: Text("Amount Due", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "amountDue")),
+                      DataColumn(label: Text("Accumulated Late Fees", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "lateFees")),
+                      DataColumn(label: Text("Contact No.", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "contactNo")),
+                    ],
+                    rows: loans.map((loan) {
+                      return DataRow(cells: [
+                        DataCell(Text("${loan["loanID"] ?? "-"}")),
+                        DataCell(Text("${loan["memName"] ?? "-"}")),
+                        DataCell(Text("${loan["loanType"] ?? "-"}")),
+                        DataCell(Text("${loan["dueDate"] ?? "-"}")),
+                        DataCell(Text("${loan["daysOverdue"] ?? "0"}")),
+                        DataCell(Text(ExportService.safeCurrency(loan["amountDue"]))),
+                        DataCell(Text(ExportService.safeCurrency(loan["lateFees"]))),
+                        DataCell(Text("${loan["contactNo"] ?? "-"}")),
+                      ]);
+                    }).toList(),
+                  ),
                 ),
               ),
             ),
@@ -686,38 +797,41 @@ class _EncoderReportsState extends State<EncoderReports> {
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          return SingleChildScrollView(
-            scrollDirection: Axis.vertical,
+          return Scrollbar(
+            thumbVisibility: true,
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: ConstrainedBox(
                 constraints: BoxConstraints(minWidth: constraints.maxWidth),
-                child: DataTable(
-                  sortColumnIndex: sortColumnIndex,
-                  sortAscending: isAscending,
-                  columnSpacing: 58,
-                  columns: [
-                    DataColumn(label: Text("Member Name", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "memName")),
-                    DataColumn(label: Text("Member ID", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "memID")),
-                    DataColumn(label: Text("Total Loans", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "totalLoans")),
-                    DataColumn(label: Text("Total Borrowed", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "totalBorrowed")),
-                    DataColumn(label: Text("Total Paid", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "totalPaid")),
-                    DataColumn(label: Text("Outstanding Balance", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "outBal")),
-                    DataColumn(label: Text("Last Payment Date", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "lastPaid")),
-                    DataColumn(label: Text("Loan Status", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "loanStatus")),
-                  ],
-                  rows: loans.map((loan) {
-                    return DataRow(cells: [
-                      DataCell(Text("${loan["memName"] ?? "-"}")),
-                      DataCell(Text("${loan["memID"] ?? "-"}")),
-                      DataCell(Text("${loan["totalLoans"] ?? "0"}")),
-                      DataCell(Text(ExportService.safeCurrency(loan["totalBorrowed"]))),
-                      DataCell(Text(ExportService.safeCurrency(loan["totalPaid"]))),
-                      DataCell(Text(ExportService.safeCurrency(loan["outBal"]))),
-                      DataCell(Text("${loan["lastPaid"] ?? "-"}")),
-                      DataCell(Text("${loan["loanStatus"] ?? "-"}")),
-                    ]);
-                  }).toList(),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.vertical,
+                  child: DataTable(
+                    sortColumnIndex: sortColumnIndex,
+                    sortAscending: isAscending,
+                    columnSpacing: 58,
+                    columns: [
+                      DataColumn(label: Text("Member Name", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "memName")),
+                      DataColumn(label: Text("Member ID", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "memID")),
+                      DataColumn(label: Text("Total Loans", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "totalLoans")),
+                      DataColumn(label: Text("Total Borrowed", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "totalBorrowed")),
+                      DataColumn(label: Text("Total Paid", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "totalPaid")),
+                      DataColumn(label: Text("Outstanding Balance", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "outBal")),
+                      DataColumn(label: Text("Last Payment Date", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "lastPaid")),
+                      DataColumn(label: Text("Loan Status", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "loanStatus")),
+                    ],
+                    rows: loans.map((loan) {
+                      return DataRow(cells: [
+                        DataCell(Text("${loan["memName"] ?? "-"}")),
+                        DataCell(Text("${loan["memID"] ?? "-"}")),
+                        DataCell(Text("${loan["totalLoans"] ?? "0"}")),
+                        DataCell(Text(ExportService.safeCurrency(loan["totalBorrowed"]))),
+                        DataCell(Text(ExportService.safeCurrency(loan["totalPaid"]))),
+                        DataCell(Text(ExportService.safeCurrency(loan["outBal"]))),
+                        DataCell(Text("${loan["lastPaid"] ?? "-"}")),
+                        DataCell(Text("${loan["loanStatus"] ?? "-"}")),
+                      ]);
+                    }).toList(),
+                  ),
                 ),
               ),
             ),
@@ -739,38 +853,41 @@ class _EncoderReportsState extends State<EncoderReports> {
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          return SingleChildScrollView(
-            scrollDirection: Axis.vertical,
+          return Scrollbar(
+            thumbVisibility: true,
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: ConstrainedBox(
                 constraints: BoxConstraints(minWidth: constraints.maxWidth),
-                child: DataTable(
-                  sortColumnIndex: sortColumnIndex,
-                  sortAscending: isAscending,
-                  columnSpacing: 58,
-                  columns: [
-                    DataColumn(label: Text("Payment ID", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "payID")),
-                    DataColumn(label: Text("Member Name", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "memName")),
-                    DataColumn(label: Text("Member ID", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "memID")),
-                    DataColumn(label: Text("Loan ID", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "loanID")),
-                    DataColumn(label: Text("Payment Date", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "payDate")),
-                    DataColumn(label: Text("Payment Method", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "payMethod")),
-                    DataColumn(label: Text("Amount Paid", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "amountPaid")),
-                    DataColumn(label: Text("Collected By", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "collectedBy")),
-                  ],
-                  rows: loans.map((loan) {
-                    return DataRow(cells: [
-                      DataCell(Text("${loan["payID"] ?? "-"}")),
-                      DataCell(Text("${loan["memName"] ?? "-"}")),
-                      DataCell(Text("${loan["memID"] ?? "-"}")),
-                      DataCell(Text("${loan["loanID"] ?? "-"}")),
-                      DataCell(Text("${loan["payDate"] ?? "-"}")),
-                      DataCell(Text("${loan["payMethod"] ?? "-"}")),
-                      DataCell(Text(ExportService.safeCurrency(loan["amountPaid"]))),
-                      DataCell(Text("${loan["collectedBy"] ?? "-"}")),
-                    ]);
-                  }).toList(),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.vertical,
+                  child: DataTable(
+                    sortColumnIndex: sortColumnIndex,
+                    sortAscending: isAscending,
+                    columnSpacing: 58,
+                    columns: [
+                      DataColumn(label: Text("Payment ID", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "payID")),
+                      DataColumn(label: Text("Member Name", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "memName")),
+                      DataColumn(label: Text("Member ID", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "memID")),
+                      DataColumn(label: Text("Loan ID", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "loanID")),
+                      DataColumn(label: Text("Payment Date", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "payDate")),
+                      DataColumn(label: Text("Payment Method", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "payMethod")),
+                      DataColumn(label: Text("Amount Paid", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "amountPaid")),
+                      DataColumn(label: Text("Collected By", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "collectedBy")),
+                    ],
+                    rows: loans.map((loan) {
+                      return DataRow(cells: [
+                        DataCell(Text("${loan["payID"] ?? "-"}")),
+                        DataCell(Text("${loan["memName"] ?? "-"}")),
+                        DataCell(Text("${loan["memID"] ?? "-"}")),
+                        DataCell(Text("${loan["loanID"] ?? "-"}")),
+                        DataCell(Text("${loan["payDate"] ?? "-"}")),
+                        DataCell(Text("${loan["payMethod"] ?? "-"}")),
+                        DataCell(Text(ExportService.safeCurrency(loan["amountPaid"]))),
+                        DataCell(Text("${loan["collectedBy"] ?? "-"}")),
+                      ]);
+                    }).toList(),
+                  ),
                 ),
               ),
             ),
@@ -933,21 +1050,21 @@ class _EncoderReportsState extends State<EncoderReports> {
                                       if (_isLoading)
                                         const Center(child: CircularProgressIndicator())
                                       else if (selectedReportType == "Active Loans")
-                                        _activeLoansData.isEmpty 
+                                        _filteredActiveLoans.isEmpty 
                                           ? _emptyState('No active loans found')
-                                          : activeLoansTable(_activeLoansData)
+                                          : activeLoansTable(_filteredActiveLoans)
                                       else if (selectedReportType == "Overdue Loans")
-                                        _overdueLoansData.isEmpty
+                                        _filteredOverdueLoans.isEmpty
                                           ? _emptyState('No overdue loans found')
-                                          : overdueLoansTable(_overdueLoansData)
+                                          : overdueLoansTable(_filteredOverdueLoans)
                                       else if (selectedReportType == "Member Loan Summary")
-                                        _memberLoansData.isEmpty
+                                        _filteredMemberLoans.isEmpty
                                           ? _emptyState('No member loan data found')
-                                          : memberLoansTable(_memberLoansData)
+                                          : memberLoansTable(_filteredMemberLoans)
                                       else if (selectedReportType == "Payment Collection")
-                                        _paymentCollectionData.isEmpty
+                                        _filteredPaymentCollection.isEmpty
                                           ? _emptyState('No payment collections found')
-                                          : payCollectionTable(_paymentCollectionData)
+                                          : payCollectionTable(_filteredPaymentCollection)
                                       else if (selectedReportType == "Missed Payments")
                                         _emptyState('Missed Payments feature coming soon')
                                       else if (selectedReportType == "Voucher & Revenue Summary")

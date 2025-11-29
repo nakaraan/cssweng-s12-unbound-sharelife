@@ -313,43 +313,53 @@ class ExportService {
             pw.SizedBox(height: 20),
             pw.Divider(),
             
-            // Application Info
+            // Mirror the appliform page: Date -> Loan Info -> Personal Info -> Co-maker -> Contact -> Consent -> Purpose
             _buildSectionHeader('Application Information'),
+            _buildInfoRow('Date of Application:', '${data['created_at'] ?? data['application_date'] ?? ''}'),
             _buildInfoRow('Application ID:', '${data['application_id'] ?? ''}'),
-            _buildInfoRow('Date of Application:', '${data['created_at'] ?? ''}'),
             _buildInfoRow('Status:', '${data['status'] ?? ''}'),
-            
-            pw.SizedBox(height: 16),
+
+            pw.SizedBox(height: 12),
+            _buildSectionHeader('Loan Information'),
+            _buildInfoRow('Loan Amount:', currencyFormat.format(data['loan_amount'] ?? 0)),
+            _buildInfoRow('Installment:', '${data['installment'] ?? ''}'),
+            _buildInfoRow('Repayment Term:', '${data['repayment_term'] ?? ''}'),
+            _buildInfoRow('Business Type:', '${data['business_type'] ?? ''}'),
+
+            pw.SizedBox(height: 12),
             _buildSectionHeader('Personal Information'),
             _buildInfoRow('Name:', '${data['member_first_name'] ?? ''} ${data['member_last_name'] ?? ''}'),
             _buildInfoRow('Date of Birth:', '${data['member_birth_date'] ?? ''}'),
+            _buildInfoRow('Group Affiliation:', '${data['group_affiliation'] ?? data['group'] ?? ''}'),
+
+            pw.SizedBox(height: 12),
+            _buildSectionHeader('Loan Co-maker'),
+            if ((data['comaker_spouse_first_name'] ?? '').toString().isNotEmpty)
+              _buildInfoRow('Spouse:', '${data['comaker_spouse_first_name'] ?? ''} ${data['comaker_spouse_last_name'] ?? ''}'),
+            if ((data['comaker_child_first_name'] ?? '').toString().isNotEmpty)
+              _buildInfoRow('Child:', '${data['comaker_child_first_name'] ?? ''} ${data['comaker_child_last_name'] ?? ''}'),
+            _buildInfoRow('Co-maker Contact No:', '${data['comaker_contact_no'] ?? data['comaker_contact_no'] ?? ''}'),
+
+            pw.SizedBox(height: 12),
+            _buildSectionHeader('Contact Information'),
             _buildInfoRow('Email:', '${data['member_email'] ?? ''}'),
             _buildInfoRow('Phone:', '${data['member_phone'] ?? ''}'),
             _buildInfoRow('Address:', '${data['address'] ?? ''}'),
-            
-            pw.SizedBox(height: 16),
-            _buildSectionHeader('Co-maker Information'),
-            if (data['comaker_spouse_first_name'] != null)
-              _buildInfoRow('Spouse:', '${data['comaker_spouse_first_name']} ${data['comaker_spouse_last_name'] ?? ''}'),
-            if (data['comaker_child_first_name'] != null)
-              _buildInfoRow('Child:', '${data['comaker_child_first_name']} ${data['comaker_child_last_name'] ?? ''}'),
-            
-            pw.SizedBox(height: 16),
-            _buildSectionHeader('Loan Details'),
-            _buildInfoRow('Loan Amount:', currencyFormat.format(data['loan_amount'] ?? 0)),
-            _buildInfoRow('Annual Income:', currencyFormat.format(data['annual_income'] ?? 0)),
-            _buildInfoRow('Business Type:', '${data['business_type'] ?? ''}'),
-            _buildInfoRow('Installment:', '${data['installment'] ?? ''}'),
-            _buildInfoRow('Repayment Term:', '${data['repayment_term'] ?? ''}'),
-            
-            pw.SizedBox(height: 16),
+
+            pw.SizedBox(height: 12),
+            _buildSectionHeader('Consent'),
+            pw.Text(data['consent'] == true
+                ? 'Applicant has agreed to the consent statement.'
+                : 'Applicant did not indicate consent.'),
+
+            pw.SizedBox(height: 12),
             _buildSectionHeader('Purpose'),
             pw.Container(
               padding: const pw.EdgeInsets.all(8),
               decoration: pw.BoxDecoration(
                 border: pw.Border.all(color: PdfColors.grey),
               ),
-              child: pw.Text('${data['reason'] ?? 'N/A'}'),
+              child: pw.Text('${data['reason'] ?? data['loan_purpose'] ?? 'N/A'}'),
             ),
             
             if (data['remarks'] != null) ...[

@@ -191,6 +191,7 @@ class _MemDBState extends State<MemberDB> {
   // Sum loan amounts (robust to int/double/string values)
   // legacy: per-loan summation is no longer used for the summary cards
   // kept for potential future filters; returns 0 when unused
+  // ignore: unused_element
   double _sumLoanAmounts() {
     return loans.fold(0.0, (double prev, l) {
       final amt = l['amt'];
@@ -486,14 +487,18 @@ class _MemDBState extends State<MemberDB> {
               title: 'Loan Dashboard',
               rows: loans,
               filename: 'loan_dashboard.pdf',
-              columnOrder: ['ref', 'amt', 'start', 'due', 'pay', 'stat'],
+              // Use the actual keys present in the `loans` map so columns are populated
+              columnOrder: ['ref', 'amt', 'interest', 'start', 'due', 'instType', 'totalInst', 'instAmt', 'status'],
               columnHeaders: {
                 'ref': 'Loan ID',
                 'amt': 'Amount',
+                'interest': 'Interest',
                 'start': 'Start Date',
                 'due': 'Due Date',
-                'pay': 'Payment',
-                'stat': 'Status',
+                'instType': 'Inst. Type',
+                'totalInst': 'Total Inst',
+                'instAmt': 'Inst. Amt',
+                'status': 'Status',
               },
             );
           },
@@ -503,14 +508,17 @@ class _MemDBState extends State<MemberDB> {
               rows: loans,
               filename: 'loan_dashboard.xlsx',
               sheetName: 'Loans',
-              columnOrder: ['ref', 'amt', 'start', 'due', 'pay', 'stat'],
+              columnOrder: ['ref', 'amt', 'interest', 'start', 'due', 'instType', 'totalInst', 'instAmt', 'status'],
               columnHeaders: {
                 'ref': 'Loan ID',
                 'amt': 'Amount',
+                'interest': 'Interest',
                 'start': 'Start Date',
                 'due': 'Due Date',
-                'pay': 'Payment',
-                'stat': 'Status',
+                'instType': 'Inst. Type',
+                'totalInst': 'Total Inst',
+                'instAmt': 'Inst. Amt',
+                'status': 'Status',
               },
             );
           },
