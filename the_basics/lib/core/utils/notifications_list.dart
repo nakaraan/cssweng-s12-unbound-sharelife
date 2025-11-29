@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:the_basics/core/utils/themes.dart';
 
 class NotificationsListPage extends StatefulWidget {
   const NotificationsListPage({super.key});
@@ -418,12 +419,12 @@ class _NotificationsListPageState extends State<NotificationsListPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFEFEFEF),
+      backgroundColor: AppThemes.lightcreme,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: AppThemes.darkgreen,
         elevation: 1,
-        title: const Text("Notifications", style: TextStyle(color: Colors.black, fontSize: 26)),
-        iconTheme: const IconThemeData(color: Colors.black),
+        title: const Text("Notifications", style: TextStyle(color: AppThemes.creme, fontSize: 26)),
+        iconTheme: const IconThemeData(color: AppThemes.creme),
       ),
       body: Padding(
         padding: const EdgeInsets.all(30),

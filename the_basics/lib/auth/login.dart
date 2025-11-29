@@ -108,7 +108,7 @@ class _LoginPageState extends State<LoginPage> {
                 width: 400,
                 padding: const EdgeInsets.all(40),
                 decoration: BoxDecoration(
-                  color: AppThemes.authContainer,
+                  color: AppThemes.lightcreme,
                   borderRadius: BorderRadius.circular(8),
                   boxShadow: [
                     BoxShadow(
@@ -125,7 +125,7 @@ class _LoginPageState extends State<LoginPage> {
                     // Username or Email Address
                     TextField(
                       controller: _emailController,
-                      style: TextStyle(color: AppThemes.authInput),
+                      style: TextStyle(color: AppThemes.brown),
                       decoration: InputDecoration(
                           labelText: 'Username or Email Address',
                           labelStyle: TextStyle(color: AppThemes.authFieldName),
@@ -139,7 +139,7 @@ class _LoginPageState extends State<LoginPage> {
                       controller: _passwordController,
                       obscureText: true,
                         style: const TextStyle(
-                        color: AppThemes.authInput
+                        color: AppThemes.brown
                       ),
                       decoration: InputDecoration(
                           labelText: 'Password',
@@ -164,7 +164,7 @@ class _LoginPageState extends State<LoginPage> {
                         child: const Text(
                           'Forgot password?',
                           style: TextStyle(
-                            color: AppThemes.authOptions,
+                            color: AppThemes.brown,
                             fontSize: 14,
                           ),
                         ),
@@ -190,7 +190,7 @@ class _LoginPageState extends State<LoginPage> {
 
                         const Text(
                           'Remember me?',
-                          style: TextStyle(color: AppThemes.authOptions),
+                          style: TextStyle(color: AppThemes.brown),
                         ),
                       ],
                     ),

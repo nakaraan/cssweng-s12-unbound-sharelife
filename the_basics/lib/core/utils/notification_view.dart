@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:the_basics/core/utils/themes.dart';
 
 class NotificationViewPage extends StatelessWidget {
   const NotificationViewPage({super.key});
@@ -18,15 +19,15 @@ class NotificationViewPage extends StatelessWidget {
     final (Color bgColor, Color accentColor, IconData icon) = _getNotificationStyle(notifType);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFEFEFEF),
+      backgroundColor: AppThemes.lightcreme,
       appBar: AppBar(
         title: const Text(
           "Notification",
-          style: TextStyle(color: Colors.black, fontSize: 26),
+          style: TextStyle(color: AppThemes.lightcreme, fontSize: 26),
         ),
-        backgroundColor: Colors.white,
+        backgroundColor: AppThemes.darkgreen,
         elevation: 1,
-        iconTheme: const IconThemeData(color: Colors.black),
+        iconTheme: const IconThemeData(color: AppThemes.lightcreme),
       ),
       body: Center(
         child: SingleChildScrollView(

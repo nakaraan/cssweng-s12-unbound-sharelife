@@ -186,7 +186,7 @@ class _RegisterPageState extends State<RegisterPage> {
           width: 800,
           padding: const EdgeInsets.all(40),
           decoration: BoxDecoration(
-            color: AppThemes.authContainer,
+            color: AppThemes.lightcreme,
             borderRadius: BorderRadius.circular(8),
             boxShadow: [
               BoxShadow(
@@ -212,7 +212,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         const Text(
                           'Personal Information',
                           style: TextStyle(
-                            color: AppThemes.searchText,
+                            color: AppThemes.orange,
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
                           ),
@@ -221,7 +221,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         
                         TextField(
                           controller: _firstNameController,
-                          style: TextStyle(color: AppThemes.authInput),
+                          style: TextStyle(color: AppThemes.brown),
                           decoration: InputDecoration(
                             labelText: 'First Name',
                             labelStyle: TextStyle(color: AppThemes.authFieldName),
@@ -233,7 +233,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         
                         TextField(
                           controller: _lastNameController,
-                          style: TextStyle(color: AppThemes.authInput),
+                          style: TextStyle(color: AppThemes.brown),
                           decoration: InputDecoration(
                             labelText: 'Last Name',
                             labelStyle: TextStyle(color: AppThemes.authFieldName),
@@ -245,7 +245,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         
                         TextField(
                           controller: _dateOfBirthController,
-                          style: TextStyle(color: AppThemes.authInput),
+                          style: TextStyle(color: AppThemes.brown),
                           readOnly: true,
                           decoration: InputDecoration(
                             labelText: 'Date of Birth',
@@ -286,7 +286,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         
                         TextField(
                           controller: _contactNumberController,
-                          style: TextStyle(color: AppThemes.authInput),
+                          style: TextStyle(color: AppThemes.brown),
                           decoration: InputDecoration(
                             labelText: 'Contact Number',
                             labelStyle: TextStyle(color: AppThemes.authFieldName),
@@ -308,7 +308,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         const Text(
                           'Log In Information',
                           style: TextStyle(
-                            color: AppThemes.searchText,
+                            color: AppThemes.orange,
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
                           ),
@@ -317,7 +317,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         
                         TextField(
                           controller: _usernameController,
-                          style: TextStyle(color: AppThemes.authInput),
+                          style: TextStyle(color: AppThemes.brown),
                           decoration: InputDecoration(
                             labelText: 'Username',
                             labelStyle: TextStyle(color: AppThemes.authFieldName),
@@ -329,7 +329,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
                         TextField(
                           controller: _emailController,
-                          style: TextStyle(color: AppThemes.authInput),
+                          style: TextStyle(color: AppThemes.brown),
                           decoration: InputDecoration(
                             labelText: 'Email Address',
                             labelStyle: TextStyle(color: AppThemes.authFieldName),
@@ -341,7 +341,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         
                         TextField(
                           controller: _passwordController,
-                          style: TextStyle(color: AppThemes.authInput),
+                          style: TextStyle(color: AppThemes.brown),
                           obscureText: true,
                           decoration: InputDecoration(
                             labelText: 'Password',
@@ -361,7 +361,7 @@ class _RegisterPageState extends State<RegisterPage> {
                               ? TextField(
                                   key: const ValueKey('confirm_field'),
                                   controller: _confirmPasswordController,
-                                  style: TextStyle(color: AppThemes.authInput),
+                                  style: TextStyle(color: AppThemes.brown),
                                   obscureText: true,
                                   decoration: const InputDecoration(
                                     labelText: 'Confirm Password',
@@ -401,7 +401,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
                   const Text(
                     'Remember me?',
-                    style: TextStyle(color: AppThemes.authOptions),
+                    style: TextStyle(color: AppThemes.brown),
                   ),
                 ],
               ),

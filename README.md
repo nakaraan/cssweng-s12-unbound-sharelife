@@ -17,21 +17,15 @@
     
     __Member__  
     `email: namh.b1l6@gmail.com`  
-    `password: Asdf1234*`
+    `password: Asdf1234`
 
     __Encoder__  
-    `email: namh.akashax@gmail.com`  
+    `email: encoder`  
     `password: password`
 
     __Admin__  
-    `email: wesner.almin.iii@gmail.com`  
+    `email: admin`  
     `password: password`  
 
 In case you come across any problems, run the following command:
 `flutter doctor`
-
-
-_Note: As of now, the Back End is still working on account creation. You can still access the other role's static pages through the buttons on the top nav bar though._
-- Resources: Admin dashboard
-- Contact Us: Encoder dashboard
-- Help: Member dashboard
