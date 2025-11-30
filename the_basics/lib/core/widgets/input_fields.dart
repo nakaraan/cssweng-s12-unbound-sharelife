@@ -103,6 +103,71 @@ class DateInputField extends StatelessWidget {
   }
 }
 
+class DateTimeInputField extends StatelessWidget {
+  final String label;
+  final TextEditingController controller;
+  final String? Function(String?)? validator;
+
+  const DateTimeInputField({
+    super.key, 
+    required this.label, 
+    required this.controller,
+    this.validator,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return TextFormField(
+      controller: controller,
+      readOnly: true,
+      validator: validator,
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: "MM-DD-YYYY HH:MM",
+        suffixIcon: const Icon(Icons.calendar_today),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+      ),
+      onTap: () async {
+        // First pick date
+        DateTime? pickedDate = await showDatePicker(
+          context: context,
+          initialDate: DateTime.now(),
+          firstDate: DateTime(1900),
+          lastDate: DateTime(2100),
+        );
+        
+        if (pickedDate != null) {
+          // Then pick time
+          TimeOfDay? pickedTime = await showTimePicker(
+            context: context,
+            initialTime: TimeOfDay.now(),
+          );
+          
+          if (pickedTime != null) {
+            // Combine date and time
+            final dateTime = DateTime(
+              pickedDate.year,
+              pickedDate.month,
+              pickedDate.day,
+              pickedTime.hour,
+              pickedTime.minute,
+            );
+            
+            // Format as MM-DD-YYYY HH:MM
+            String month = dateTime.month.toString().padLeft(2, '0');
+            String day = dateTime.day.toString().padLeft(2, '0');
+            String year = dateTime.year.toString();
+            String hour = dateTime.hour.toString().padLeft(2, '0');
+            String minute = dateTime.minute.toString().padLeft(2, '0');
+            controller.text = "$month-$day-$year $hour:$minute";
+          }
+        }
+      },
+    );
+  }
+}
+
 class DropdownInputField extends StatelessWidget {
   final String label;
   final TextEditingController? controller;

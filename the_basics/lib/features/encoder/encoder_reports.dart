@@ -100,36 +100,93 @@ class _EncoderReportsState extends State<EncoderReports> {
   Future<void> _fetchOverdueLoans() async {
     if (mounted) setState(() => _isLoading = true);
     try {
-      final response = await _supabase
+      // Fetch all active loans
+      final loansResponse = await _supabase
           .from('approved_loans')
           .select('application_id, member_id, member_first_name, member_last_name, member_phone, loan_amount, created_at, outstanding_balance, status, repayment_term, installment')
-          .eq('status', 'overdue')
+          .eq('status', 'active')
           .order('created_at', ascending: false);
 
-      final List<dynamic> data = response as List<dynamic>;
+      final List<dynamic> loansData = loansResponse as List<dynamic>;
       
-      if (mounted) setState(() {
-        _overdueLoansData = data.map((loan) {
-          final appId = loan['application_id'] ?? 0;
-          final createdAt = loan['created_at'] != null 
-              ? DateTime.parse(loan['created_at']) 
-              : DateTime.now();
-          final loanId = 'LN-${createdAt.year}-${appId.toString().padLeft(4, '0')}';
-          final dueDate = _calculateDueDate(createdAt, loan['repayment_term']);
-          final dueDateObj = DateTime.tryParse(dueDate) ?? DateTime.now();
-          final daysOverdue = DateTime.now().difference(dueDateObj).inDays;
+      // Fetch all payments
+      final paymentsResponse = await _supabase
+          .from('payments')
+          .select('approved_loan_id, installment_number, payment_date, status')
+          .eq('status', 'Validated');
+      
+      final List<dynamic> paymentsData = paymentsResponse as List<dynamic>;
+      
+      // Group payments by loan
+      final Map<int, List<Map<String, dynamic>>> paymentsByLoan = {};
+      for (final payment in paymentsData) {
+        final loanId = payment['approved_loan_id'] as int?;
+        if (loanId != null) {
+          paymentsByLoan.putIfAbsent(loanId, () => []).add(payment as Map<String, dynamic>);
+        }
+      }
+      
+      final List<Map<String, dynamic>> overdueLoans = [];
+      final now = DateTime.now();
+      
+      for (final loan in loansData) {
+        final appId = loan['application_id'] as int;
+        final createdAt = loan['created_at'] != null 
+            ? DateTime.parse(loan['created_at']) 
+            : DateTime.now();
+        final loanId = 'LN-${createdAt.year}-${appId.toString().padLeft(4, '0')}';
+        final repaymentTerm = loan['repayment_term']?.toString().toLowerCase();
+        final installmentCount = _repaymentTermToMonths(loan['installment']);
+        
+        if (installmentCount == null || installmentCount <= 0) continue;
+        
+        // Get completed payments for this loan
+        final completedPayments = paymentsByLoan[appId] ?? [];
+        final completedInstallments = completedPayments
+            .map((p) => p['installment_number'])
+            .where((i) => i != null)
+            .map((i) => i is int ? i : int.tryParse(i.toString()))
+            .where((i) => i != null)
+            .cast<int>()
+            .toSet();
+        
+        // Check each installment to see if any are overdue
+        DateTime? earliestOverdueDueDate;
+        
+        for (int i = 1; i <= installmentCount; i++) {
+          // Skip if this installment is already paid
+          if (completedInstallments.contains(i)) continue;
           
-          return {
+          // Calculate due date for this installment
+          final dueDate = _calculateInstallmentDueDate(createdAt, i, repaymentTerm);
+          
+          // Check if overdue
+          if (now.isAfter(dueDate)) {
+            if (earliestOverdueDueDate == null || dueDate.isBefore(earliestOverdueDueDate)) {
+              earliestOverdueDueDate = dueDate;
+            }
+          }
+        }
+        
+        // If we found an overdue installment, add this loan to the report
+        if (earliestOverdueDueDate != null) {
+          final daysOverdue = now.difference(earliestOverdueDueDate).inDays;
+          
+          overdueLoans.add({
             'loanID': loanId,
             'memName': '${loan['member_first_name'] ?? ''} ${loan['member_last_name'] ?? ''}'.trim(),
             'loanType': loan['installment'] ?? '-',
-            'dueDate': dueDate,
+            'dueDate': earliestOverdueDueDate.toString().split(' ')[0],
             'daysOverdue': daysOverdue > 0 ? daysOverdue : 0,
             'amountDue': (loan['outstanding_balance'] ?? 0).toString(),
-            'lateFees': '0', // Not in schema
+            'lateFees': '0',
             'contactNo': loan['member_phone'] ?? '-',
-          };
-        }).toList();
+          });
+        }
+      }
+      
+      if (mounted) setState(() {
+        _overdueLoansData = overdueLoans;
       });
     } catch (e) {
       debugPrint('Error fetching overdue loans: $e');
@@ -240,7 +297,7 @@ class _EncoderReportsState extends State<EncoderReports> {
             installment_number,
             payment_type,
             status,
-            approved_loans(application_id, member_id, member_first_name, member_last_name, repayment_term)
+            approved_loans(application_id, member_id, member_first_name, member_last_name, repayment_term, created_at)
           ''')
           .order('payment_date', ascending: false);
 
@@ -259,10 +316,36 @@ class _EncoderReportsState extends State<EncoderReports> {
         }
       }
 
+      // Group payments by loan to determine overdue status
+      final Map<int, List<Map<String, dynamic>>> paymentsByLoan = {};
+      for (final payment in data) {
+        final loanId = payment['approved_loan_id'] as int?;
+        if (loanId != null) {
+          paymentsByLoan.putIfAbsent(loanId, () => []).add(payment as Map<String, dynamic>);
+        }
+      }
+
       if (mounted) setState(() {
         _paymentCollectionData = data.map((payment) {
           final loanData = payment['approved_loans'];
           final staffId = payment['staff_id'];
+          final loanId = payment['approved_loan_id'] as int?;
+          
+          // Determine if this payment is overdue
+          bool isOverdue = false;
+          if (loanData != null && loanId != null) {
+            final loanStartDate = loanData['created_at'] != null 
+                ? DateTime.parse(loanData['created_at'])
+                : null;
+            
+            if (loanStartDate != null) {
+              isOverdue = _isPaymentOverdue(
+                payment,
+                loanStartDate,
+                paymentsByLoan[loanId] ?? [],
+              );
+            }
+          }
           
           return {
             'payID': (payment['payment_id'] ?? 0).toString(),
@@ -277,6 +360,8 @@ class _EncoderReportsState extends State<EncoderReports> {
             'payMethod': payment['payment_type'] ?? '-',
             'amountPaid': (payment['amount'] ?? 0).toString(),
             'collectedBy': staffId != null ? (staffNames[staffId] ?? 'Staff #$staffId') : 'Online',
+            'status': payment['status'] ?? '-',
+            'isOverdue': isOverdue,
           };
         }).toList();
       });
@@ -285,6 +370,120 @@ class _EncoderReportsState extends State<EncoderReports> {
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  // Determine if a payment is overdue based on the 15th/30th schedule
+  bool _isPaymentOverdue(
+    Map<String, dynamic> payment,
+    DateTime loanStartDate,
+    List<Map<String, dynamic>> allPaymentsForLoan,
+  ) {
+    // If payment is already approved, paid, or completed, it's not overdue
+    final status = (payment['status'] ?? '').toString().toLowerCase();
+    if (status == 'approved' || status == 'paid' || status == 'completed') {
+      return false;
+    }
+
+    final installmentNumber = payment['installment_number'];
+    if (installmentNumber == null) return false;
+
+    final installmentNum = installmentNumber is int ? installmentNumber : int.tryParse(installmentNumber.toString());
+    if (installmentNum == null || installmentNum <= 0) return false;
+
+    // Get repayment term from the loan data
+    String? repaymentTerm;
+    if (allPaymentsForLoan.isNotEmpty) {
+      final firstPayment = allPaymentsForLoan.first;
+      final loanData = firstPayment['approved_loans'];
+      if (loanData != null) {
+        repaymentTerm = loanData['repayment_term']?.toString().toLowerCase();
+      }
+    }
+
+    // Calculate the due date for this specific installment
+    final dueDate = _calculateInstallmentDueDate(loanStartDate, installmentNum, repaymentTerm);
+    
+    // Payment is overdue if current date is past the due date
+    final now = DateTime.now();
+    return now.isAfter(dueDate);
+  }
+
+  // Calculate the due date for a specific installment number
+  DateTime _calculateInstallmentDueDate(DateTime loanStartDate, int installmentNum, String? repaymentTerm) {
+    final isBiMonthly = (repaymentTerm?.contains('bi') ?? false) || (repaymentTerm?.contains('twice') ?? false);
+    
+    // Determine the first due date based on loan start date
+    DateTime firstDueDate;
+    final startDay = loanStartDate.day;
+    
+    if (isBiMonthly) {
+      // Bi-monthly: payments due on 15th and 30th of each month
+      if (startDay <= 15) {
+        // First payment due on 15th of current month
+        firstDueDate = DateTime(loanStartDate.year, loanStartDate.month, 15);
+      } else if (startDay <= 30) {
+        // First payment due on 30th of current month (or last day)
+        final lastDay = DateTime(loanStartDate.year, loanStartDate.month + 1, 0).day;
+        firstDueDate = DateTime(loanStartDate.year, loanStartDate.month, lastDay < 30 ? lastDay : 30);
+      } else {
+        // Started on 31st, first payment due on 15th of next month
+        firstDueDate = DateTime(loanStartDate.year, loanStartDate.month + 1, 15);
+      }
+      
+      // For bi-monthly, alternate between 15th and 30th
+      DateTime currentDue = firstDueDate;
+      for (int i = 1; i < installmentNum; i++) {
+        if (currentDue.day == 15) {
+          // Next due is 30th of same month
+          final lastDay = DateTime(currentDue.year, currentDue.month + 1, 0).day;
+          currentDue = DateTime(currentDue.year, currentDue.month, lastDay < 30 ? lastDay : 30);
+        } else {
+          // Next due is 15th of next month
+          currentDue = DateTime(currentDue.year, currentDue.month + 1, 15);
+        }
+      }
+      return currentDue;
+    } else {
+      // Monthly: payment due on either 15th or 30th each month (not both)
+      if (startDay <= 15) {
+        // Monthly payments on 15th
+        firstDueDate = DateTime(loanStartDate.year, loanStartDate.month, 15);
+        // Add (installmentNum - 1) months
+        return DateTime(firstDueDate.year, firstDueDate.month + (installmentNum - 1), 15);
+      } else {
+        // Monthly payments on 30th
+        final lastDay = DateTime(loanStartDate.year, loanStartDate.month + 1, 0).day;
+        firstDueDate = DateTime(loanStartDate.year, loanStartDate.month, lastDay < 30 ? lastDay : 30);
+        // Add (installmentNum - 1) months
+        final targetMonth = firstDueDate.month + (installmentNum - 1);
+        final targetYear = firstDueDate.year + ((targetMonth - 1) ~/ 12);
+        final adjustedMonth = ((targetMonth - 1) % 12) + 1;
+        final lastDayOfTargetMonth = DateTime(targetYear, adjustedMonth + 1, 0).day;
+        return DateTime(targetYear, adjustedMonth, lastDayOfTargetMonth < 30 ? lastDayOfTargetMonth : 30);
+      }
+    }
+  }
+
+  int? _repaymentTermToMonths(dynamic repaymentTerm) {
+    if (repaymentTerm == null) return null;
+    if (repaymentTerm is int) return repaymentTerm;
+    if (repaymentTerm is num) return repaymentTerm.toInt();
+
+    final s = repaymentTerm.toString().toLowerCase().trim();
+    // direct integer like "3" or "3 months"
+    final direct = int.tryParse(s);
+    if (direct != null) return direct;
+
+    final digitMatch = RegExp(r"(\d+)").firstMatch(s);
+    if (digitMatch != null) return int.tryParse(digitMatch.group(1)!);
+
+    if (s.contains('monthly')) return 1;
+    if (s.contains('bimonth') || s.contains('bimonthly')) return 2;
+    if (s.contains('quarter')) return 3;
+    if (s.contains('semi')) return 6;
+    if (s.contains('12') || s.contains('year') || s.contains('annual')) return 12;
+
+    return null;
   }
 
   Future<void> _fetchVoucherRevenue() async {
@@ -435,7 +634,6 @@ class _EncoderReportsState extends State<EncoderReports> {
               "Overdue Loans",
               "Member Loan Summary",
               "Payment Collection",
-              "Missed Payments",
               "Voucher & Revenue Summary"
             ],
             onChanged: (value) {
@@ -876,7 +1074,18 @@ class _EncoderReportsState extends State<EncoderReports> {
                       DataColumn(label: Text("Collected By", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "collectedBy")),
                     ],
                     rows: loans.map((loan) {
-                      return DataRow(cells: [
+                      final isOverdue = loan['isOverdue'] == true;
+                      final status = (loan['status'] ?? '').toString().toLowerCase();
+                      final isInvalidated = status == 'invalidated';
+                      
+                      // Invalidated takes priority over overdue (dark gray)
+                      final rowColor = isInvalidated 
+                          ? Colors.grey.withOpacity(0.3)
+                          : (isOverdue ? Colors.red.withOpacity(0.15) : null);
+                      
+                      return DataRow(
+                        color: MaterialStateProperty.all(rowColor),
+                        cells: [
                         DataCell(Text("${loan["payID"] ?? "-"}")),
                         DataCell(Text("${loan["memName"] ?? "-"}")),
                         DataCell(Text("${loan["memID"] ?? "-"}")),
@@ -1065,8 +1274,6 @@ class _EncoderReportsState extends State<EncoderReports> {
                                         _filteredPaymentCollection.isEmpty
                                           ? _emptyState('No payment collections found')
                                           : payCollectionTable(_filteredPaymentCollection)
-                                      else if (selectedReportType == "Missed Payments")
-                                        _emptyState('Missed Payments feature coming soon')
                                       else if (selectedReportType == "Voucher & Revenue Summary")
                                         voucherRevenueSummary(_voucherRevenueData.isNotEmpty ? _voucherRevenueData : {})
                                       else

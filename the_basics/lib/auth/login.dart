@@ -19,6 +19,7 @@ class _LoginPageState extends State<LoginPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _rememberMe = false;
+  bool _obscurePassword = true;
 
   @override
   void initState() {
@@ -137,7 +138,7 @@ class _LoginPageState extends State<LoginPage> {
                     // Password
                     TextField(
                       controller: _passwordController,
-                      obscureText: true,
+                      obscureText: _obscurePassword,
                         style: const TextStyle(
                         color: AppThemes.brown
                       ),
@@ -145,7 +146,18 @@ class _LoginPageState extends State<LoginPage> {
                           labelText: 'Password',
                           labelStyle: TextStyle(color: AppThemes.authFieldName),
                           border: OutlineInputBorder(),
-                          hintText: 'Password'),
+                          hintText: 'Password',
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                              color: AppThemes.authFieldName,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _obscurePassword = !_obscurePassword;
+                              });
+                            },
+                          )),
                     ),
                     const SizedBox(height: 8),
 

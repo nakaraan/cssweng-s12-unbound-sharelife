@@ -170,7 +170,7 @@ class _MemDBState extends State<AdminLoanPayRec> {
             bank_name,
             bank_deposit_date,
             status,
-            approved_loans(application_id, member_id, member_first_name, member_last_name, repayment_term)
+            approved_loans(application_id, member_id, member_first_name, member_last_name, repayment_term, created_at)
           ''')
           .order('payment_date', ascending: false);
 
@@ -190,8 +190,34 @@ class _MemDBState extends State<AdminLoanPayRec> {
         }
       }
 
+      // Group payments by loan to determine due dates
+      final Map<int, List<Map<String, dynamic>>> paymentsByLoan = {};
+      for (final payment in data) {
+        final loanId = payment['approved_loan_id'] as int?;
+        if (loanId != null) {
+          paymentsByLoan.putIfAbsent(loanId, () => []).add(payment as Map<String, dynamic>);
+        }
+      }
+
       for (final payment in data) {
         final loanData = payment['approved_loans'];
+        final loanId = payment['approved_loan_id'] as int?;
+        
+        // Determine if this payment is overdue
+        bool isOverdue = false;
+        if (loanData != null && loanId != null) {
+          final loanStartDate = loanData['created_at'] != null 
+              ? DateTime.parse(loanData['created_at'])
+              : null;
+          
+          if (loanStartDate != null) {
+            isOverdue = _isPaymentOverdue(
+              payment,
+              loanStartDate,
+              paymentsByLoan[loanId] ?? [],
+            );
+          }
+        }
 
         fetchedPayments.add({
           'payment_id': (payment['payment_id'] ?? 0).toString(),
@@ -207,6 +233,7 @@ class _MemDBState extends State<AdminLoanPayRec> {
           'bank_name': payment['bank_name'] ?? '',
           'status': payment['status'] ?? '',
           'collectedBy': payment['staff_id'] != null ? (staffNames[payment['staff_id']] ?? 'Staff #${payment['staff_id']}') : 'Online',
+          'isOverdue': isOverdue,
         });
       }
 
@@ -220,6 +247,99 @@ class _MemDBState extends State<AdminLoanPayRec> {
         payments = [];
         filteredPayments = [];
       });
+    }
+  }
+
+  // Determine if a payment is overdue based on the 15th/30th schedule
+  bool _isPaymentOverdue(
+    Map<String, dynamic> payment,
+    DateTime loanStartDate,
+    List<Map<String, dynamic>> allPaymentsForLoan,
+  ) {
+    // If payment is already approved, paid, or completed, it's not overdue
+    final status = (payment['status'] ?? '').toString().toLowerCase();
+    if (status == 'approved' || status == 'paid' || status == 'completed') {
+      return false;
+    }
+
+    final installmentNumber = payment['installment_number'];
+    if (installmentNumber == null) return false;
+
+    final installmentNum = installmentNumber is int ? installmentNumber : int.tryParse(installmentNumber.toString());
+    if (installmentNum == null || installmentNum <= 0) return false;
+
+    // Get repayment term from the loan data in allPaymentsForLoan
+    String? repaymentTerm;
+    if (allPaymentsForLoan.isNotEmpty) {
+      final firstPayment = allPaymentsForLoan.first;
+      final loanData = firstPayment['approved_loans'];
+      if (loanData != null) {
+        repaymentTerm = loanData['repayment_term']?.toString().toLowerCase();
+      }
+    }
+
+    // Calculate the due date for this specific installment
+    final dueDate = _calculateInstallmentDueDate(loanStartDate, installmentNum, repaymentTerm);
+    
+    // Payment is overdue if current date is past the due date
+    final now = DateTime.now();
+    return now.isAfter(dueDate);
+  }
+
+  // Calculate the due date for a specific installment number
+  DateTime _calculateInstallmentDueDate(DateTime loanStartDate, int installmentNum, String? repaymentTerm) {
+    final isBiMonthly = (repaymentTerm?.contains('bi') ?? false) || (repaymentTerm?.contains('twice') ?? false);
+    
+    // Determine the first due date based on loan start date
+    DateTime firstDueDate;
+    final startDay = loanStartDate.day;
+    
+    if (isBiMonthly) {
+      // Bi-monthly: payments due on 15th and 30th of each month
+      if (startDay <= 15) {
+        // First payment due on 15th of current month
+        firstDueDate = DateTime(loanStartDate.year, loanStartDate.month, 15);
+      } else if (startDay <= 30) {
+        // First payment due on 30th of current month (or last day)
+        final lastDay = DateTime(loanStartDate.year, loanStartDate.month + 1, 0).day;
+        firstDueDate = DateTime(loanStartDate.year, loanStartDate.month, lastDay < 30 ? lastDay : 30);
+      } else {
+        // Started on 31st, first payment due on 15th of next month
+        firstDueDate = DateTime(loanStartDate.year, loanStartDate.month + 1, 15);
+      }
+      
+      // For bi-monthly, add 15 days (half month) per installment
+      DateTime currentDue = firstDueDate;
+      for (int i = 1; i < installmentNum; i++) {
+        // Alternate between 15th and 30th
+        if (currentDue.day == 15) {
+          // Next due is 30th of same month
+          final lastDay = DateTime(currentDue.year, currentDue.month + 1, 0).day;
+          currentDue = DateTime(currentDue.year, currentDue.month, lastDay < 30 ? lastDay : 30);
+        } else {
+          // Next due is 15th of next month
+          currentDue = DateTime(currentDue.year, currentDue.month + 1, 15);
+        }
+      }
+      return currentDue;
+    } else {
+      // Monthly: payment due on either 15th or 30th each month (not both)
+      if (startDay <= 15) {
+        // Monthly payments on 15th
+        firstDueDate = DateTime(loanStartDate.year, loanStartDate.month, 15);
+        // Add (installmentNum - 1) months
+        return DateTime(firstDueDate.year, firstDueDate.month + (installmentNum - 1), 15);
+      } else {
+        // Monthly payments on 30th
+        final lastDay = DateTime(loanStartDate.year, loanStartDate.month + 1, 0).day;
+        firstDueDate = DateTime(loanStartDate.year, loanStartDate.month, lastDay < 30 ? lastDay : 30);
+        // Add (installmentNum - 1) months
+        final targetMonth = firstDueDate.month + (installmentNum - 1);
+        final targetYear = firstDueDate.year + ((targetMonth - 1) ~/ 12);
+        final adjustedMonth = ((targetMonth - 1) % 12) + 1;
+        final lastDayOfTargetMonth = DateTime(targetYear, adjustedMonth + 1, 0).day;
+        return DateTime(targetYear, adjustedMonth, lastDayOfTargetMonth < 30 ? lastDayOfTargetMonth : 30);
+      }
     }
   }
 
@@ -794,7 +914,18 @@ class _MemDBState extends State<AdminLoanPayRec> {
                           DataColumn(label: Text("Status", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "status")),
                         ],
                         rows: filteredPayments.map((pay) {
-                          return DataRow(cells: [
+                          final isOverdue = pay['isOverdue'] == true;
+                          final status = (pay['status'] ?? '').toString().toLowerCase();
+                          final isInvalidated = status == 'invalidated';
+                          
+                          // Invalidated takes priority over overdue (dark gray)
+                          final rowColor = isInvalidated 
+                              ? Colors.grey.withOpacity(0.3)
+                              : (isOverdue ? Colors.red.withOpacity(0.15) : null);
+                          
+                          return DataRow(
+                            color: MaterialStateProperty.all(rowColor),
+                            cells: [
                             DataCell(Text("${pay["payment_id"] ?? ""}")),
                             DataCell(Text("${pay["approved_loan_id"] ?? ""}")),
                             DataCell(Text("${pay["installment_number"] ?? ""}")),

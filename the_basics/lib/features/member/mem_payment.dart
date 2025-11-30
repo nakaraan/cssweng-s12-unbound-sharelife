@@ -147,7 +147,7 @@ class _MemberPaymentFormState extends State<MemberPaymentForm> {
               SizedBox(width: 16),
 
               Expanded(
-                child: DateInputField(
+                child: DateTimeInputField(
                   label: "Date of Payment",
                   controller: paymentDateController,
                 ),
@@ -181,14 +181,25 @@ class _MemberPaymentFormState extends State<MemberPaymentForm> {
               SizedBox(width: 16),
 
               Expanded(
+                child: DateTimeInputField(
+                  label: "Date of Payment",
+                  controller: paymentDateController,
+                ),
+              ),
+              SizedBox(width: 16),
+
+              Expanded(
                 child: TextInputField(
                   label: "Reference Number", 
                   controller: refNoController,
                   hint: "",
                 ),
               ),
-              SizedBox(width: 16),
-              
+            ],
+          ),
+          SizedBox(height: 16),
+          Row(
+            children: [
               Expanded(
                 child: FileUploadField(
                   label: "Screenshot of Receipt", 
@@ -208,7 +219,6 @@ class _MemberPaymentFormState extends State<MemberPaymentForm> {
                     },
                 )
               ),
-
             ],
           ),
         ];
@@ -229,7 +239,7 @@ class _MemberPaymentFormState extends State<MemberPaymentForm> {
               SizedBox(width: 16),
 
               Expanded(
-                child: DateInputField(
+                child: DateTimeInputField(
                   label: "Date of Bank Deposit",
                   controller: paymentDateController,
                 ),
@@ -644,6 +654,26 @@ class _MemberPaymentFormState extends State<MemberPaymentForm> {
         }
         debugPrint('[MemberPayment] Cash payment - date: ${paymentDateController.text}, staff: $selectedStaffName (ID: $selectedStaffId)');
       } else if (selectedPaymentMethod == 'Gcash') {
+        if (paymentDateController.text.trim().isEmpty) {
+          _showError("Please enter the date of payment");
+          return;
+        }
+        // Validate payment date is not in the past
+        try {
+          final dateParts = paymentDateController.text.split('/');
+          if (dateParts.length == 3) {
+            final payDate = DateTime(int.parse(dateParts[2]), int.parse(dateParts[0]), int.parse(dateParts[1]));
+            final today = DateTime.now();
+            final todayMidnight = DateTime(today.year, today.month, today.day);
+            if (payDate.isBefore(todayMidnight)) {
+              _showError("Payment date cannot be in the past.");
+              return;
+            }
+          }
+        } catch (e) {
+          _showError("Invalid payment date format. Use MM/DD/YYYY");
+          return;
+        }
         if (refNoController.text.trim().isEmpty) {
           _showError("Please enter the GCash reference number");
           return;
@@ -658,7 +688,7 @@ class _MemberPaymentFormState extends State<MemberPaymentForm> {
           _showError("Please upload screenshot of receipt");
           return;
         }
-        debugPrint('[MemberPayment] GCash payment - ref: ${refNoController.text}');
+        debugPrint('[MemberPayment] GCash payment - date: ${paymentDateController.text}, ref: ${refNoController.text}');
       } else if (selectedPaymentMethod == 'Bank_Transfer') {
         if (paymentDateController.text.trim().isEmpty) {
           _showError("Please enter the bank deposit date");
@@ -876,10 +906,13 @@ class _MemberPaymentFormState extends State<MemberPaymentForm> {
 
       if (selectedPaymentMethod == 'Gcash') {
         paymentPayload['gcash_reference'] = refNoController.text.trim();
+        paymentPayload['bank_deposit_date'] = paymentDate?.toIso8601String();
+        paymentPayload['bank_name'] = 'GCash';
         if (gcashScreenshotPath != null) {
           paymentPayload['gcash_screenshot_path'] = gcashScreenshotPath;
           debugPrint('[MemberPayment] Added GCash screenshot path: $gcashScreenshotPath');
         }
+        debugPrint('[MemberPayment] Added GCash details: date=${paymentDate?.toIso8601String()}, bank_name=GCash');
       }
 
       // Insert payment record

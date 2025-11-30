@@ -26,6 +26,9 @@ class _RegisterPageState extends State<RegisterPage> {
 
   bool _showConfirmPassword = false;
   bool _rememberMe = false;
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
+  bool _showPasswordTooltip = false;
 
   @override
   void initState() {
@@ -339,15 +342,95 @@ class _RegisterPageState extends State<RegisterPage> {
                         ),
                         const SizedBox(height: 15),
                         
-                        TextField(
-                          controller: _passwordController,
-                          style: TextStyle(color: AppThemes.brown),
-                          obscureText: true,
-                          decoration: InputDecoration(
-                            labelText: 'Password',
-                            labelStyle: TextStyle(color: AppThemes.authFieldName),
-                            border: OutlineInputBorder(),
-                            hintText: 'Password'
+                        MouseRegion(
+                          onEnter: (_) => setState(() => _showPasswordTooltip = true),
+                          onExit: (_) => setState(() => _showPasswordTooltip = false),
+                          child: Focus(
+                            onFocusChange: (hasFocus) {
+                              setState(() => _showPasswordTooltip = hasFocus);
+                            },
+                            child: Stack(
+                              clipBehavior: Clip.none,
+                              children: [
+                                TextField(
+                                  controller: _passwordController,
+                                  style: TextStyle(color: AppThemes.brown),
+                                  obscureText: _obscurePassword,
+                                  decoration: InputDecoration(
+                                    labelText: 'Password',
+                                    labelStyle: TextStyle(color: AppThemes.authFieldName),
+                                    border: OutlineInputBorder(),
+                                    hintText: 'Password',
+                                    suffixIcon: IconButton(
+                                      icon: Icon(
+                                        _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                                        color: AppThemes.authFieldName,
+                                      ),
+                                      onPressed: () {
+                                        setState(() {
+                                          _obscurePassword = !_obscurePassword;
+                                        });
+                                      },
+                                    ),
+                                  ),
+                                ),
+                                if (_showPasswordTooltip)
+                                  Positioned(
+                                    left: 0,
+                                    top: -120,
+                                    child: Container(
+                                      width: 300,
+                                      padding: EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        color: Colors.black87,
+                                        borderRadius: BorderRadius.circular(8),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black26,
+                                            blurRadius: 8,
+                                            offset: Offset(0, 2),
+                                          ),
+                                        ],
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(
+                                            'Password Requirements:',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                          SizedBox(height: 6),
+                                          Text(
+                                            '• At least 6 characters long',
+                                            style: TextStyle(color: Colors.white70, fontSize: 11),
+                                          ),
+                                          Text(
+                                            '• One uppercase letter (A-Z)',
+                                            style: TextStyle(color: Colors.white70, fontSize: 11),
+                                          ),
+                                          Text(
+                                            '• One lowercase letter (a-z)',
+                                            style: TextStyle(color: Colors.white70, fontSize: 11),
+                                          ),
+                                          Text(
+                                            '• One number (0-9)',
+                                            style: TextStyle(color: Colors.white70, fontSize: 11),
+                                          ),
+                                          Text(
+                                            '• One special character (!@#\$%^&*.,?)',
+                                            style: TextStyle(color: Colors.white70, fontSize: 11),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
                           ),
                         ),
                         const SizedBox(height: 15),
@@ -358,16 +441,36 @@ class _RegisterPageState extends State<RegisterPage> {
                           transitionBuilder: (child, animation) =>
                               FadeTransition(opacity: animation, child: child),
                           child: _showConfirmPassword
-                              ? TextField(
+                              ? MouseRegion(
                                   key: const ValueKey('confirm_field'),
-                                  controller: _confirmPasswordController,
-                                  style: TextStyle(color: AppThemes.brown),
-                                  obscureText: true,
-                                  decoration: const InputDecoration(
-                                    labelText: 'Confirm Password',
-                                    labelStyle: TextStyle(color: AppThemes.authFieldName),
-                                    border: OutlineInputBorder(),
-                                    hintText: 'Confirm Password',
+                                  onEnter: (_) => setState(() => _showPasswordTooltip = true),
+                                  onExit: (_) => setState(() => _showPasswordTooltip = false),
+                                  child: Focus(
+                                    onFocusChange: (hasFocus) {
+                                      setState(() => _showPasswordTooltip = hasFocus);
+                                    },
+                                    child: TextField(
+                                      controller: _confirmPasswordController,
+                                      style: TextStyle(color: AppThemes.brown),
+                                      obscureText: _obscureConfirmPassword,
+                                      decoration: InputDecoration(
+                                        labelText: 'Confirm Password',
+                                        labelStyle: TextStyle(color: AppThemes.authFieldName),
+                                        border: OutlineInputBorder(),
+                                        hintText: 'Confirm Password',
+                                        suffixIcon: IconButton(
+                                          icon: Icon(
+                                            _obscureConfirmPassword ? Icons.visibility_off : Icons.visibility,
+                                            color: AppThemes.authFieldName,
+                                          ),
+                                          onPressed: () {
+                                            setState(() {
+                                              _obscureConfirmPassword = !_obscureConfirmPassword;
+                                            });
+                                          },
+                                        ),
+                                      ),
+                                    ),
                                   ),
                                 )
                               : const SizedBox(

@@ -295,14 +295,25 @@ class _EncoderPaymentFormState extends State<EncoderPaymentForm> {
               SizedBox(width: 16),
 
               Expanded(
+                child: DateInputField(
+                  label: "Date of Payment",
+                  controller: paymentDateController,
+                ),
+              ),
+              SizedBox(width: 16),
+
+              Expanded(
                 child: TextInputField(
                   label: "Reference Number", 
                   controller: refNoController,
                   hint: "",
                 ),
               ),
-              SizedBox(width: 16),
-              
+            ],
+          ),
+          SizedBox(height: 16),
+          Row(
+            children: [
               Expanded(
                 child: FileUploadField(
                   label: "Screenshot of Receipt", 
@@ -322,7 +333,6 @@ class _EncoderPaymentFormState extends State<EncoderPaymentForm> {
                     },
                 )
               ),
-
             ],
           ),
         ];
@@ -695,6 +705,26 @@ class _EncoderPaymentFormState extends State<EncoderPaymentForm> {
         }
         debugPrint('[EncoderPayment] Cash payment - date: ${paymentDateController.text}');
       } else if (selectedPaymentMethod == 'Gcash') {
+        if (paymentDateController.text.trim().isEmpty) {
+          _showError("Please enter the date of payment");
+          return;
+        }
+        // Validate payment date is not in the past
+        try {
+          final dateParts = paymentDateController.text.split('/');
+          if (dateParts.length == 3) {
+            final payDate = DateTime(int.parse(dateParts[2]), int.parse(dateParts[0]), int.parse(dateParts[1]));
+            final today = DateTime.now();
+            final todayMidnight = DateTime(today.year, today.month, today.day);
+            if (payDate.isBefore(todayMidnight)) {
+              _showError("Payment date cannot be in the past.");
+              return;
+            }
+          }
+        } catch (e) {
+          _showError("Invalid payment date format. Use MM/DD/YYYY");
+          return;
+        }
         if (refNoController.text.trim().isEmpty) {
           _showError("Please enter the GCash reference number");
           return;
@@ -709,7 +739,7 @@ class _EncoderPaymentFormState extends State<EncoderPaymentForm> {
           _showError("Please upload screenshot of receipt");
           return;
         }
-        debugPrint('[EncoderPayment] GCash payment - ref: ${refNoController.text}');
+        debugPrint('[EncoderPayment] GCash payment - date: ${paymentDateController.text}, ref: ${refNoController.text}');
       } else if (selectedPaymentMethod == 'Bank_Transfer') {
         if (paymentDateController.text.trim().isEmpty) {
           _showError("Please enter the bank deposit date");
@@ -931,10 +961,13 @@ class _EncoderPaymentFormState extends State<EncoderPaymentForm> {
 
       if (selectedPaymentMethod == 'Gcash') {
         paymentPayload['gcash_reference'] = refNoController.text.trim();
+        paymentPayload['bank_deposit_date'] = paymentDate?.toIso8601String();
+        paymentPayload['bank_name'] = 'GCash';
         if (gcashScreenshotPath != null) {
           paymentPayload['gcash_screenshot_path'] = gcashScreenshotPath;
           debugPrint('[EncoderPayment] Added GCash screenshot path: $gcashScreenshotPath');
         }
+        debugPrint('[EncoderPayment] Added GCash details: date=${paymentDate?.toIso8601String()}, bank_name=GCash');
       }
 
       // Insert payment record
