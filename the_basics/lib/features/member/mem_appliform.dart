@@ -212,12 +212,28 @@ class _MemAppliformState extends State<MemAppliform> {
       // Check active approved loans (status = 'active')
       final active = await Supabase.instance.client
         .from('approved_loans')
-        .select('application_id,status,loan_amount,created_at')
+        .select('application_id,status,loan_amount,outstanding_balance,amount_paid,created_at')
         .eq('member_id', memberId)
         .eq('status', 'active')
         .limit(1) as List<dynamic>;
       debugPrint('[MemAppliform] approved_loans query returned ${active.length} rows for memberId=$memberId');
-      if (active.isNotEmpty) debugPrint('[MemAppliform] active record: ${active.first}');
+      if (active.isNotEmpty) {
+        debugPrint('[MemAppliform] active record: ${active.first}');
+        final loan = active.first as Map<String, dynamic>;
+        debugPrint('[MemAppliform] Loan details - Status: ${loan['status']}, Outstanding: ${loan['outstanding_balance']}, Amount Paid: ${loan['amount_paid']}');
+      }
+
+      // Also check for ANY loan regardless of status to debug
+      final anyLoans = await Supabase.instance.client
+        .from('approved_loans')
+        .select('application_id,status,loan_amount,outstanding_balance,amount_paid')
+        .eq('member_id', memberId) as List<dynamic>;
+      debugPrint('[MemAppliform] Total approved_loans (any status) for member: ${anyLoans.length}');
+      if (anyLoans.isNotEmpty) {
+        for (var loan in anyLoans) {
+          debugPrint('[MemAppliform] Found loan: ID=${loan['application_id']}, Status=${loan['status']}, Outstanding=${loan['outstanding_balance']}');
+        }
+      }
 
       debugPrint('[MemAppliform] Setting state: pending=${pending.isNotEmpty} active=${active.isNotEmpty}');
       setState(() {
