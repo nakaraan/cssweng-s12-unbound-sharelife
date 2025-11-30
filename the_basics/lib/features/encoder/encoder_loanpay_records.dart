@@ -34,8 +34,7 @@ class _MemDBState extends State<EncoderLoanPayRec> {
   DateTime? _paymentEndDate;
 
   double buttonHeight = 28;
-  // Scroll controllers for tables (separate for loans and payments to avoid
-  // attaching one controller to multiple ScrollViews simultaneously)
+  // Scroll controllers for tables (separate for loans and payments)
   final ScrollController _loansVertController = ScrollController();
   final ScrollController _loansHorizController = ScrollController();
   final ScrollController _paymentsVertController = ScrollController();
@@ -65,7 +64,6 @@ class _MemDBState extends State<EncoderLoanPayRec> {
       _fetchLoans(),
       _fetchPayments(),
     ]);
-    debugPrint('[EncoderLoanPayRec] after _loadData loans=${loans.length}, payments=${payments.length}');
     if (mounted) setState(() => _isLoading = false);
   }
 
@@ -77,11 +75,7 @@ class _MemDBState extends State<EncoderLoanPayRec> {
           .select('application_id, member_id, member_first_name, member_last_name, loan_amount, created_at, outstanding_balance, status, repayment_term, installment')
           .order('created_at', ascending: false);
 
-      debugPrint('[EncoderLoanPayRec] _fetchLoans raw response type: ${response.runtimeType}');
-
       final List<dynamic> data = List<dynamic>.from(response);
-
-      debugPrint('[EncoderLoanPayRec] _fetchLoans returned ${data.length} rows');
 
       // Batch collect member ids so we can fetch member names if the loan rows don't include them
       final Set<int> memberIds = {};
@@ -94,7 +88,6 @@ class _MemDBState extends State<EncoderLoanPayRec> {
       Map<int, String> memberNames = {};
       if (memberIds.isNotEmpty) {
         try {
-          debugPrint('[EncoderLoanPayRec] Fetching member names for ids: $memberIds');
           final membersResp = await Supabase.instance.client
               .from('members')
               .select('id, first_name, last_name')
@@ -110,10 +103,6 @@ class _MemDBState extends State<EncoderLoanPayRec> {
       final List<Map<String, dynamic>> fetchedLoans = [];
       for (var i = 0; i < data.length; i++) {
         final loan = data[i];
-        try {
-          debugPrint('[EncoderLoanPayRec] row[$i] preview: $loan');
-        } catch (_) {}
-
         try {
           final appId = loan['application_id'] ?? 0;
           final createdAt = loan['created_at'] != null ? DateTime.parse(loan['created_at']) : DateTime.now();
@@ -154,24 +143,18 @@ class _MemDBState extends State<EncoderLoanPayRec> {
         }
       }
 
-      debugPrint('[EncoderLoanPayRec] _fetchLoans mapped ${fetchedLoans.length} loans');
       if (mounted) setState(() {
         loans = fetchedLoans;
         filteredLoans = List.from(fetchedLoans);
       });
     } catch (e) {
-      print('Error fetching loans: $e');
-      if (mounted) {
-        setState(() {
-          loans = [];
-        });
-      }
+      debugPrint('Error fetching loans: $e');
+      if (mounted) setState(() => loans = []);
     }
   }
 
   Future<void> _fetchPayments() async {
     try {
-      // Select specific payment fields and include nested approved_loans to get member info
       final response = await Supabase.instance.client
           .from('payments')
           .select('''
@@ -187,7 +170,7 @@ class _MemDBState extends State<EncoderLoanPayRec> {
             bank_name,
             bank_deposit_date,
             status,
-            approved_loans(application_id, member_id, member_first_name, member_last_name, repayment_term)
+            approved_loans(application_id, member_id, member_first_name, member_last_name, repayment_term, created_at)
           ''')
           .order('payment_date', ascending: false);
 
@@ -207,8 +190,34 @@ class _MemDBState extends State<EncoderLoanPayRec> {
         }
       }
 
+      // Group payments by loan to determine due dates
+      final Map<int, List<Map<String, dynamic>>> paymentsByLoan = {};
+      for (final payment in data) {
+        final loanId = payment['approved_loan_id'] as int?;
+        if (loanId != null) {
+          paymentsByLoan.putIfAbsent(loanId, () => []).add(payment as Map<String, dynamic>);
+        }
+      }
+
       for (final payment in data) {
         final loanData = payment['approved_loans'];
+        final loanId = payment['approved_loan_id'] as int?;
+        
+        // Determine if this payment is overdue
+        bool isOverdue = false;
+        if (loanData != null && loanId != null) {
+          final loanStartDate = loanData['created_at'] != null 
+              ? DateTime.parse(loanData['created_at'])
+              : null;
+          
+          if (loanStartDate != null) {
+            isOverdue = _isPaymentOverdue(
+              payment,
+              loanStartDate,
+              paymentsByLoan[loanId] ?? [],
+            );
+          }
+        }
 
         fetchedPayments.add({
           'payment_id': (payment['payment_id'] ?? 0).toString(),
@@ -224,19 +233,145 @@ class _MemDBState extends State<EncoderLoanPayRec> {
           'bank_name': payment['bank_name'] ?? '',
           'status': payment['status'] ?? '',
           'collectedBy': payment['staff_id'] != null ? (staffNames[payment['staff_id']] ?? 'Staff #${payment['staff_id']}') : 'Online',
+          'isOverdue': isOverdue,
         });
       }
 
-      setState(() {
+      if (mounted) setState(() {
         payments = fetchedPayments;
         filteredPayments = List.from(fetchedPayments);
       });
     } catch (e) {
-      print('Error fetching payments: $e');
-      setState(() {
+      debugPrint('Error fetching payments: $e');
+      if (mounted) setState(() {
         payments = [];
         filteredPayments = [];
       });
+    }
+  }
+
+  // Determine if a payment is overdue based on the 15th/30th schedule
+  bool _isPaymentOverdue(
+    Map<String, dynamic> payment,
+    DateTime loanStartDate,
+    List<Map<String, dynamic>> allPaymentsForLoan,
+  ) {
+    final installmentNumber = payment['installment_number'];
+    if (installmentNumber == null) return false;
+
+    final installmentNum = installmentNumber is int ? installmentNumber : int.tryParse(installmentNumber.toString());
+    if (installmentNum == null || installmentNum <= 0) return false;
+
+    // Get repayment term from the loan data in allPaymentsForLoan
+    String? repaymentTerm;
+    if (allPaymentsForLoan.isNotEmpty) {
+      final firstPayment = allPaymentsForLoan.first;
+      final loanData = firstPayment['approved_loans'];
+      if (loanData != null) {
+        repaymentTerm = loanData['repayment_term']?.toString().toLowerCase();
+      }
+    }
+
+    // Calculate the due date for this specific installment
+    final dueDate = _calculateInstallmentDueDate(loanStartDate, installmentNum, repaymentTerm);
+    
+    // Get payment date or use current date if payment hasn't been made yet
+    DateTime comparisonDate;
+    final paymentDateStr = payment['payment_date'];
+    if (paymentDateStr != null && paymentDateStr.toString().isNotEmpty) {
+      try {
+        comparisonDate = DateTime.parse(paymentDateStr.toString());
+      } catch (e) {
+        comparisonDate = DateTime.now();
+      }
+    } else {
+      // No payment date means payment not made yet, use current date
+      comparisonDate = DateTime.now();
+    }
+    
+    // Payment is overdue if the comparison date (payment date or current date) is after the due date
+    return comparisonDate.isAfter(dueDate);
+  }
+
+  // Calculate the due date for a specific installment number
+  DateTime _calculateInstallmentDueDate(DateTime loanStartDate, int installmentNum, String? repaymentTerm) {
+    final isBiMonthly = (repaymentTerm?.contains('bi') ?? false) || (repaymentTerm?.contains('twice') ?? false);
+    
+    // Determine the first due date based on loan start date
+    DateTime firstDueDate;
+    final startDay = loanStartDate.day;
+    
+    if (isBiMonthly) {
+      // Bi-monthly: payments due on 15th and 30th of each month
+      if (startDay < 15) {
+        // First payment due on 15th of current month
+        firstDueDate = DateTime(loanStartDate.year, loanStartDate.month, 15);
+        // If first due date is today or in the past, or less than 7 days grace, move to 30th of same month
+        if (!firstDueDate.isAfter(loanStartDate) || firstDueDate.difference(loanStartDate).inDays < 7) {
+          final lastDay = DateTime(loanStartDate.year, loanStartDate.month + 1, 0).day;
+          firstDueDate = DateTime(loanStartDate.year, loanStartDate.month, lastDay < 30 ? lastDay : 30);
+          // If still less than 7 days, move to next cycle
+          if (firstDueDate.difference(loanStartDate).inDays < 7) {
+            firstDueDate = DateTime(loanStartDate.year, loanStartDate.month + 1, 15);
+          }
+        }
+      } else if (startDay < 30) {
+        // First payment due on 30th of current month (or last day)
+        final lastDay = DateTime(loanStartDate.year, loanStartDate.month + 1, 0).day;
+        firstDueDate = DateTime(loanStartDate.year, loanStartDate.month, lastDay < 30 ? lastDay : 30);
+        // If first due date is today or in the past, or less than 7 days grace, move to 15th of next month
+        if (!firstDueDate.isAfter(loanStartDate) || firstDueDate.difference(loanStartDate).inDays < 7) {
+          firstDueDate = DateTime(loanStartDate.year, loanStartDate.month + 1, 15);
+        }
+      } else {
+        // Started on 30th or 31st, first payment due on 15th of next month
+        firstDueDate = DateTime(loanStartDate.year, loanStartDate.month + 1, 15);
+      }
+      
+      // For bi-monthly, add 15 days (half month) per installment
+      DateTime currentDue = firstDueDate;
+      for (int i = 1; i < installmentNum; i++) {
+        // Alternate between 15th and 30th
+        if (currentDue.day == 15) {
+          // Next due is 30th of same month
+          final lastDay = DateTime(currentDue.year, currentDue.month + 1, 0).day;
+          currentDue = DateTime(currentDue.year, currentDue.month, lastDay < 30 ? lastDay : 30);
+        } else {
+          // Next due is 15th of next month
+          currentDue = DateTime(currentDue.year, currentDue.month + 1, 15);
+        }
+      }
+      return currentDue;
+    } else {
+      // Monthly: payment due on either 15th or 30th each month (not both)
+      if (startDay < 15) {
+        // Monthly payments on 15th
+        firstDueDate = DateTime(loanStartDate.year, loanStartDate.month, 15);
+        // If first due date is today or in the past, move to next month
+        if (!firstDueDate.isAfter(loanStartDate)) {
+          firstDueDate = DateTime(loanStartDate.year, loanStartDate.month + 1, 15);
+        }
+        // Add (installmentNum - 1) months
+        final targetMonth = firstDueDate.month + (installmentNum - 1);
+        final targetYear = firstDueDate.year + ((targetMonth - 1) ~/ 12);
+        final adjustedMonth = ((targetMonth - 1) % 12) + 1;
+        return DateTime(targetYear, adjustedMonth, 15);
+      } else {
+        // Monthly payments on 30th (or last day of month)
+        // First payment should be 30th of NEXT month to give grace period
+        firstDueDate = DateTime(loanStartDate.year, loanStartDate.month + 1, 30);
+        // Adjust if next month has fewer than 30 days
+        final nextMonthLastDay = DateTime(firstDueDate.year, firstDueDate.month + 1, 0).day;
+        if (nextMonthLastDay < 30) {
+          firstDueDate = DateTime(firstDueDate.year, firstDueDate.month, nextMonthLastDay);
+        }
+        // Add (installmentNum - 1) months
+        final targetMonth = firstDueDate.month + (installmentNum - 1);
+        final targetYear = firstDueDate.year + ((targetMonth - 1) ~/ 12);
+        final adjustedMonth = ((targetMonth - 1) % 12) + 1;
+        final lastDayOfTargetMonth = DateTime(targetYear, adjustedMonth + 1, 0).day;
+        return DateTime(targetYear, adjustedMonth, lastDayOfTargetMonth < 30 ? lastDayOfTargetMonth : 30);
+      }
     }
   }
 
@@ -274,6 +409,7 @@ class _MemDBState extends State<EncoderLoanPayRec> {
     List<Map<String, dynamic>> data,
     String key,
   ) {
+    if (!mounted) return;
     setState(() {
       sortColumnIndex = columnIndex;
       isAscending = ascending;
@@ -362,6 +498,17 @@ class _MemDBState extends State<EncoderLoanPayRec> {
   Widget loanFilters() {
     return Container(
       padding: EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
       child: Row(
         children: [
           // Reference number search
@@ -464,7 +611,7 @@ class _MemDBState extends State<EncoderLoanPayRec> {
           SizedBox(
             height: buttonHeight,
             child: ElevatedButton(
-              onPressed: _loadData,
+              onPressed: () {}, //_fetchPaymentHistory,
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.black,
                 minimumSize: Size(80, buttonHeight),
@@ -486,7 +633,7 @@ class _MemDBState extends State<EncoderLoanPayRec> {
             onExportPdf: () async {
               await ExportService.exportAndSharePdf(
                 context: context,
-                rows: filteredLoans,
+                rows: loans,
                 title: 'Loan Records',
                 filename: 'loan_records_${DateTime.now().millisecondsSinceEpoch}.pdf',
                 columnOrder: ['ref', 'memName', 'amt', 'interest', 'start', 'due', 'instType', 'totalInst', 'instAmt', 'status'],
@@ -507,7 +654,7 @@ class _MemDBState extends State<EncoderLoanPayRec> {
             onExportXlsx: () async {
               await ExportService.exportAndShareExcel(
                 context: context,
-                rows: filteredLoans,
+                rows: loans,
                 filename: 'loan_records_${DateTime.now().millisecondsSinceEpoch}.xlsx',
                 sheetName: 'Loan Records',
                 columnOrder: ['ref', 'memName', 'amt', 'interest', 'start', 'due', 'instType', 'totalInst', 'instAmt', 'status'],
@@ -534,6 +681,74 @@ class _MemDBState extends State<EncoderLoanPayRec> {
   Widget loansTable(List<Map<String, dynamic>> loans) {
     const boldStyle = TextStyle(fontWeight: FontWeight.bold);
 
+    return Expanded(
+      child: Container(
+        padding: EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 8,
+              offset: Offset(0, 2),
+            ),
+          ],
+        ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              controller: _loansVertController,
+              scrollDirection: Axis.vertical,
+              child: SingleChildScrollView(
+                controller: _loansHorizController,
+                scrollDirection: Axis.horizontal,
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(minWidth: constraints.maxWidth),
+                      child: DataTable(
+                        sortColumnIndex: sortColumnIndex,
+                        sortAscending: isAscending,
+                        columnSpacing: 58,
+                        columns: [
+                          DataColumn(label: Text("Ref No.", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "ref")),
+                          DataColumn(label: Text("Member Name", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "memName")),
+                          DataColumn(label: Text("Amt.", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "amt")),
+                          DataColumn(label: Text("Interest", style: boldStyle), numeric: true, onSort: (i, asc) => onSort(i, asc, loans, "interest")),
+                          DataColumn(label: Text("Start Date", style: boldStyle), numeric: true, onSort: (i, asc) => onSort(i, asc, loans, "start")),
+                          DataColumn(label: Text("Due Date", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "due")),
+                          DataColumn(label: Text("Inst. Type", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "instType")),
+                          DataColumn(label: Text("Total Inst.", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "totalInst")),
+                          DataColumn(label: Text("Inst. Amt.", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "instAmt")),
+                          DataColumn(label: Text("Status", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "status")),
+                        ],
+                        rows: loans.map((loan) {
+                          return DataRow(cells: [
+                            DataCell(Text(loan["ref"])),
+                            DataCell(Text(loan["memName"])),
+                            DataCell(Text(ExportService.safeCurrency(loan["amt"]))),
+                            DataCell(Text("${loan["interest"]}%")),
+                            DataCell(Text(loan["start"])),
+                            DataCell(Text(loan["due"])),
+                            DataCell(Text(loan["instType"])),
+                            DataCell(Text("${loan["totalInst"]}")),
+                            DataCell(Text(ExportService.safeCurrency(loan["instAmt"]))),
+                            DataCell(Text(loan["status"])),
+                          ]);
+                        }).toList(),
+                      ),
+                    ),
+                  ),
+                );
+          },
+        ),
+      ),
+    );
+  }
+
+
+  // Payment tab things
+
+  Widget payFilters() {
     return Container(
       padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -547,70 +762,6 @@ class _MemDBState extends State<EncoderLoanPayRec> {
           ),
         ],
       ),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final minWidth = constraints.maxWidth;
-          return Scrollbar(
-            controller: _loansVertController,
-            thumbVisibility: true,
-            child: SingleChildScrollView(
-              controller: _loansVertController,
-              scrollDirection: Axis.vertical,
-              child: Scrollbar(
-                controller: _loansHorizController,
-                thumbVisibility: true,
-                child: SingleChildScrollView(
-                  controller: _loansHorizController,
-                  scrollDirection: Axis.horizontal,
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(minWidth: minWidth),
-                    child: DataTable(
-                      sortColumnIndex: sortColumnIndex,
-                      sortAscending: isAscending,
-                      columnSpacing: 58,
-                      columns: [
-                        DataColumn(label: Text("Ref No.", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "ref")),
-                        DataColumn(label: Text("Member Name", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "memName")),
-                        DataColumn(label: Text("Amt.", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "amt")),
-                        DataColumn(label: Text("Interest", style: boldStyle), numeric: true, onSort: (i, asc) => onSort(i, asc, loans, "interest")),
-                        DataColumn(label: Text("Start Date", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "start")),
-                        DataColumn(label: Text("Due Date", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "due")),
-                        DataColumn(label: Text("Inst. Type", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "instType")),
-                        DataColumn(label: Text("Total Inst.", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "totalInst")),
-                        DataColumn(label: Text("Inst. Amt.", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "instAmt")),
-                        DataColumn(label: Text("Status", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "status")),
-                      ],
-                      rows: loans.map((loan) {
-                        return DataRow(cells: [
-                          DataCell(Text(loan["ref"].toString())),
-                          DataCell(Text(loan["memName"].toString())),
-                          DataCell(Text(ExportService.safeCurrency(loan["amt"]))),
-                          DataCell(Text("${loan["interest"]}%")),
-                          DataCell(Text(loan["start"].toString())),
-                          DataCell(Text(loan["due"].toString())),
-                          DataCell(Text(loan["instType"].toString())),
-                          DataCell(Text("${loan["totalInst"]}")),
-                          DataCell(Text(ExportService.safeCurrency(loan["instAmt"]))),
-                          DataCell(Text(loan["status"].toString())),
-                        ]);
-                      }).toList(),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-
-  // Payment tab things
-
-  Widget payFilters() {
-    return Container(
-      padding: EdgeInsets.all(16),
       child: Row(
         children: [
           // payment id search
@@ -755,90 +906,90 @@ class _MemDBState extends State<EncoderLoanPayRec> {
   Widget payTable(List<Map<String, dynamic>> loans) {
     const boldStyle = TextStyle(fontWeight: FontWeight.bold);
 
-    return Container(
-      padding: EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 8,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final minWidth = constraints.maxWidth;
-          return Scrollbar(
-            controller: _paymentsVertController,
-            thumbVisibility: true,
-            child: SingleChildScrollView(
+    return Expanded(
+      child: Container(
+        padding: EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 8,
+              offset: Offset(0, 2),
+            ),
+          ],
+        ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
               controller: _paymentsVertController,
               scrollDirection: Axis.vertical,
-              child: Scrollbar(
+              child: SingleChildScrollView(
                 controller: _paymentsHorizController,
-                thumbVisibility: true,
-                child: SingleChildScrollView(
-                  controller: _paymentsHorizController,
-                  scrollDirection: Axis.horizontal,
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(minWidth: minWidth),
-                    child: DataTable(
-                      sortColumnIndex: sortColumnIndex,
-                      sortAscending: isAscending,
-                      columnSpacing: 58,
-                      columns: [
-                        DataColumn(label: Text("Payment ID", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "payment_id")),
-                        DataColumn(label: Text("Loan ID", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "approved_loan_id")),
-                        DataColumn(label: Text("Inst. No.", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "installment_number")),
-                        DataColumn(label: Text("Amt.", style: boldStyle), numeric: true, onSort: (i, asc) => onSort(i, asc, loans, "amount")),
-                        DataColumn(label: Text("Payment Type", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "payment_type")),
-                        DataColumn(label: Text("GCash Ref No.", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "gcash_reference")),
-                        DataColumn(label: Text("Bank Name", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "bank_name")),
-                        DataColumn(label: Text("Pay Date", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "payment_date")),
-                        DataColumn(label: Text("Status", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "status")),
-                      ],
-                      rows: filteredPayments.map((pay) {
-                        return DataRow(cells: [
-                          DataCell(Text("${pay["payment_id"] ?? ""}")),
-                          DataCell(Text("${pay["approved_loan_id"] ?? ""}")),
-                          DataCell(Text("${pay["installment_number"] ?? ""}")),
-                          DataCell(Text(ExportService.safeCurrency(pay["amount"]))),
-                          DataCell(Text("${pay["payment_type"] ?? ""}")),
-                          DataCell(Text("${pay["gcash_reference"] ?? ""}")),
-                          DataCell(Text("${pay["bank_name"] ?? ""}")),
-                          DataCell(Text("${pay["payment_date"] ?? ""}")),
-                          DataCell(Text("${pay["status"] ?? ""}")),
-                        ]);
-                      }).toList(),
+                scrollDirection: Axis.horizontal,
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(minWidth: constraints.maxWidth),
+                      child: DataTable(
+                        sortColumnIndex: sortColumnIndex,
+                        sortAscending: isAscending,
+                        columnSpacing: 58,
+                        columns: [
+                          DataColumn(label: Text("Payment ID", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "payment_id")),
+                          DataColumn(label: Text("Member Name", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "memName")),
+                          DataColumn(label: Text("Loan ID", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "approved_loan_id")),
+                          DataColumn(label: Text("Inst. No.", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "installment_number")),
+                          DataColumn(label: Text("Amt.", style: boldStyle), numeric: true, onSort: (i, asc) => onSort(i, asc, loans, "amount")),
+                          DataColumn(label: Text("Payment Type", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "payment_type")),
+                          DataColumn(label: Text("GCash Ref No.", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "gcash_reference")),
+                          DataColumn(label: Text("Bank Name", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "bank_name")),
+                          DataColumn(label: Text("Pay Date", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "payment_date")),
+                          DataColumn(label: Text("Status", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "status")),
+                        ],
+                        rows: filteredPayments.map((pay) {
+                          final isOverdue = pay['isOverdue'] == true;
+                          final status = (pay['status'] ?? '').toString().toLowerCase();
+                          final isInvalidated = status == 'invalidated';
+                          
+                          // Invalidated takes priority over overdue (dark gray)
+                          final rowColor = isInvalidated 
+                              ? Colors.grey.withOpacity(0.3)
+                              : (isOverdue ? Colors.red.withOpacity(0.15) : null);
+                          
+                          return DataRow(
+                            color: MaterialStateProperty.all(rowColor),
+                            cells: [
+                            DataCell(Text("${pay["payment_id"] ?? ""}")),
+                            DataCell(Text("${pay["memName"] ?? "-"}")),
+                            DataCell(Text("${pay["approved_loan_id"] ?? ""}")),
+                            DataCell(Text("${pay["installment_number"] ?? ""}")),
+                            DataCell(Text(ExportService.safeCurrency(pay["amount"]))),
+                            DataCell(Text("${pay["payment_type"] ?? ""}")),
+                            DataCell(Text("${pay["gcash_reference"] ?? ""}")),
+                            DataCell(Text("${pay["bank_name"] ?? ""}")),
+                            DataCell(Text("${pay["payment_date"] ?? ""}")),
+                            DataCell(Text("${pay["status"] ?? ""}")),
+                          ]);
+                        }).toList(),
+                      ),
                     ),
                   ),
-                ),
-              ),
-            ),
-          );
-        },
+                );
+          },
+        ),
       ),
     );
   }
-  
+
 
 
   @override
   Widget build(BuildContext context) {
 
     return Scaffold(
-      body: Container(
-    decoration: BoxDecoration(
-      image: DecorationImage(
-        image: AssetImage("assets/imgs/bg_in.png"),
-        fit: BoxFit.cover,
-      ),
-    ),
-    child: Column(
+      body: Column(
         children: [
+
           // top nav bar
           TopNavBar(splash: "Encoder"),
 
@@ -893,29 +1044,28 @@ class _MemDBState extends State<EncoderLoanPayRec> {
                             Expanded(
                               child: TabBarView(
                                 children: [
-                                  
-                                  // Loans Tab
+                                  // ===== Loans Tab =====
                                   Column(
                                     crossAxisAlignment: CrossAxisAlignment.stretch,
                                     children: [
                                       loanFilters(),
                                       SizedBox(height: 24),
-                                      // Diagnostic: show how many loans were loaded (helps detect RLS/filtering)
+                                      // Diagnostic: show how many loans were loaded
                                       Padding(
                                         padding: const EdgeInsets.only(bottom: 8.0, left: 8.0),
                                         child: Text('Loaded loans: ${loans.length}', style: TextStyle(color: Colors.grey)),
                                       ),
-                                      Expanded(child: loansTable(filteredLoans))
+                                      loansTable(filteredLoans),
                                     ],
                                   ),
 
-                                  // Payments Tab
+                                  // ===== Payments Tab =====
                                   Column(
                                     crossAxisAlignment: CrossAxisAlignment.stretch,
                                     children: [
                                       payFilters(),
                                       SizedBox(height: 24),
-                                      Expanded(child: payTable(filteredPayments)),
+                                      payTable(filteredPayments),
                                     ],
                                   ),
                                 ],
@@ -933,7 +1083,6 @@ class _MemDBState extends State<EncoderLoanPayRec> {
           ),
         ],
       ),
-    )
     );
   }
 }

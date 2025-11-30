@@ -148,8 +148,7 @@ class _AdminReportsState extends State<AdminReports> {
       // Fetch all payments
       final paymentsResponse = await _supabase
           .from('payments')
-          .select('approved_loan_id, installment_number, payment_date, status')
-          .eq('status', 'Validated');
+          .select('approved_loan_id, installment_number, payment_date, status');
       
       final List<dynamic> paymentsData = paymentsResponse as List<dynamic>;
       
@@ -176,9 +175,10 @@ class _AdminReportsState extends State<AdminReports> {
         
         if (installmentCount == null || installmentCount <= 0) continue;
         
-        // Get completed payments for this loan
-        final completedPayments = paymentsByLoan[appId] ?? [];
-        final completedInstallments = completedPayments
+        // Get all payments for this loan
+        final loanPayments = paymentsByLoan[appId] ?? [];
+        final validatedInstallments = loanPayments
+            .where((p) => (p['status'] ?? '').toString().toLowerCase() == 'validated')
             .map((p) => p['installment_number'])
             .where((i) => i != null)
             .map((i) => i is int ? i : int.tryParse(i.toString()))
@@ -188,32 +188,68 @@ class _AdminReportsState extends State<AdminReports> {
         
         // Check each installment to see if any are overdue
         DateTime? earliestOverdueDueDate;
+        int? earliestOverdueDays;
         
         for (int i = 1; i <= installmentCount; i++) {
-          // Skip if this installment is already paid
-          if (completedInstallments.contains(i)) continue;
-          
           // Calculate due date for this installment
           final dueDate = _calculateInstallmentDueDate(createdAt, i, repaymentTerm);
           
-          // Check if overdue
-          if (now.isAfter(dueDate)) {
-            if (earliestOverdueDueDate == null || dueDate.isBefore(earliestOverdueDueDate)) {
-              earliestOverdueDueDate = dueDate;
+          // Check if this installment has ANY payment (validated or not) to check for late payment
+          final payment = loanPayments.firstWhere(
+            (p) => (p['installment_number'] is int ? p['installment_number'] : int.tryParse(p['installment_number'].toString())) == i,
+            orElse: () => <String, dynamic>{},
+          );
+          
+          if (payment.isNotEmpty) {
+            // Payment exists (any status) - check if it was paid late
+            final paymentDateStr = payment['payment_date'];
+            if (paymentDateStr != null && paymentDateStr.toString().isNotEmpty) {
+              try {
+                final paymentDate = DateTime.parse(paymentDateStr.toString());
+                if (paymentDate.isAfter(dueDate)) {
+                  // This payment was made late (regardless of validation status)
+                  final daysLate = paymentDate.difference(dueDate).inDays;
+                  if (earliestOverdueDueDate == null || dueDate.isBefore(earliestOverdueDueDate)) {
+                    earliestOverdueDueDate = dueDate;
+                    earliestOverdueDays = daysLate;
+                  }
+                }
+              } catch (e) {
+                debugPrint('Error parsing payment date: $e');
+              }
+            } else if (!validatedInstallments.contains(i)) {
+              // Payment exists but no date (pending?) and not validated - check if overdue
+              if (now.isAfter(dueDate)) {
+                final daysLate = now.difference(dueDate).inDays;
+                if (earliestOverdueDueDate == null || dueDate.isBefore(earliestOverdueDueDate)) {
+                  earliestOverdueDueDate = dueDate;
+                  earliestOverdueDays = daysLate;
+                }
+              }
+            }
+          } else if (!validatedInstallments.contains(i)) {
+            // No payment for this installment - check if it's overdue
+            if (now.isAfter(dueDate)) {
+              final daysLate = now.difference(dueDate).inDays;
+              if (earliestOverdueDueDate == null || dueDate.isBefore(earliestOverdueDueDate)) {
+                earliestOverdueDueDate = dueDate;
+                earliestOverdueDays = daysLate;
+              }
             }
           }
         }
         
-        // If we found an overdue installment, add this loan to the report
-        if (earliestOverdueDueDate != null) {
-          final daysOverdue = now.difference(earliestOverdueDueDate).inDays;
+        // If we found an overdue installment (paid late or unpaid), add this loan to the report
+        if (earliestOverdueDueDate != null && earliestOverdueDays != null) {
+          // Debug logging
+          debugPrint('[Overdue] Loan $loanId: Created=${createdAt.toString().split(' ')[0]}, DueDate=${earliestOverdueDueDate.toString().split(' ')[0]}, DaysOverdue=$earliestOverdueDays, Installments=${validatedInstallments.length}/$installmentCount paid');
           
           overdueLoans.add({
             'loanID': loanId,
             'memName': '${loan['member_first_name'] ?? ''} ${loan['member_last_name'] ?? ''}'.trim(),
             'loanType': loan['installment'] ?? '-',
             'dueDate': earliestOverdueDueDate.toString().split(' ')[0],
-            'daysOverdue': daysOverdue > 0 ? daysOverdue : 0,
+            'daysOverdue': earliestOverdueDays > 0 ? earliestOverdueDays : 0,
             'amountDue': (loan['outstanding_balance'] ?? 0).toString(),
             'lateFees': '0',
             'contactNo': loan['member_phone'] ?? '-',
@@ -414,12 +450,6 @@ class _AdminReportsState extends State<AdminReports> {
     DateTime loanStartDate,
     List<Map<String, dynamic>> allPaymentsForLoan,
   ) {
-    // If payment is already approved, paid, or completed, it's not overdue
-    final status = (payment['status'] ?? '').toString().toLowerCase();
-    if (status == 'approved' || status == 'paid' || status == 'completed') {
-      return false;
-    }
-
     final installmentNumber = payment['installment_number'];
     if (installmentNumber == null) return false;
 
@@ -439,9 +469,22 @@ class _AdminReportsState extends State<AdminReports> {
     // Calculate the due date for this specific installment
     final dueDate = _calculateInstallmentDueDate(loanStartDate, installmentNum, repaymentTerm);
     
-    // Payment is overdue if current date is past the due date
-    final now = DateTime.now();
-    return now.isAfter(dueDate);
+    // Get payment date or use current date if payment hasn't been made yet
+    DateTime comparisonDate;
+    final paymentDateStr = payment['payment_date'];
+    if (paymentDateStr != null && paymentDateStr.toString().isNotEmpty) {
+      try {
+        comparisonDate = DateTime.parse(paymentDateStr.toString());
+      } catch (e) {
+        comparisonDate = DateTime.now();
+      }
+    } else {
+      // No payment date means payment not made yet, use current date
+      comparisonDate = DateTime.now();
+    }
+    
+    // Payment is overdue if the comparison date (payment date or current date) is after the due date
+    return comparisonDate.isAfter(dueDate);
   }
 
   // Calculate the due date for a specific installment number
@@ -454,15 +497,28 @@ class _AdminReportsState extends State<AdminReports> {
     
     if (isBiMonthly) {
       // Bi-monthly: payments due on 15th and 30th of each month
-      if (startDay <= 15) {
+      if (startDay < 15) {
         // First payment due on 15th of current month
         firstDueDate = DateTime(loanStartDate.year, loanStartDate.month, 15);
-      } else if (startDay <= 30) {
+        // If first due date is today or in the past, or less than 7 days grace, move to 30th of same month
+        if (!firstDueDate.isAfter(loanStartDate) || firstDueDate.difference(loanStartDate).inDays < 7) {
+          final lastDay = DateTime(loanStartDate.year, loanStartDate.month + 1, 0).day;
+          firstDueDate = DateTime(loanStartDate.year, loanStartDate.month, lastDay < 30 ? lastDay : 30);
+          // If still less than 7 days, move to next cycle
+          if (firstDueDate.difference(loanStartDate).inDays < 7) {
+            firstDueDate = DateTime(loanStartDate.year, loanStartDate.month + 1, 15);
+          }
+        }
+      } else if (startDay < 30) {
         // First payment due on 30th of current month (or last day)
         final lastDay = DateTime(loanStartDate.year, loanStartDate.month + 1, 0).day;
         firstDueDate = DateTime(loanStartDate.year, loanStartDate.month, lastDay < 30 ? lastDay : 30);
+        // If first due date is today or in the past, or less than 7 days grace, move to 15th of next month
+        if (!firstDueDate.isAfter(loanStartDate) || firstDueDate.difference(loanStartDate).inDays < 7) {
+          firstDueDate = DateTime(loanStartDate.year, loanStartDate.month + 1, 15);
+        }
       } else {
-        // Started on 31st, first payment due on 15th of next month
+        // Started on 30th or 31st, first payment due on 15th of next month
         firstDueDate = DateTime(loanStartDate.year, loanStartDate.month + 1, 15);
       }
       
@@ -481,15 +537,27 @@ class _AdminReportsState extends State<AdminReports> {
       return currentDue;
     } else {
       // Monthly: payment due on either 15th or 30th each month (not both)
-      if (startDay <= 15) {
+      if (startDay < 15) {
         // Monthly payments on 15th
         firstDueDate = DateTime(loanStartDate.year, loanStartDate.month, 15);
+        // If first due date is today or in the past, move to next month
+        if (!firstDueDate.isAfter(loanStartDate)) {
+          firstDueDate = DateTime(loanStartDate.year, loanStartDate.month + 1, 15);
+        }
         // Add (installmentNum - 1) months
-        return DateTime(firstDueDate.year, firstDueDate.month + (installmentNum - 1), 15);
+        final targetMonth = firstDueDate.month + (installmentNum - 1);
+        final targetYear = firstDueDate.year + ((targetMonth - 1) ~/ 12);
+        final adjustedMonth = ((targetMonth - 1) % 12) + 1;
+        return DateTime(targetYear, adjustedMonth, 15);
       } else {
-        // Monthly payments on 30th
-        final lastDay = DateTime(loanStartDate.year, loanStartDate.month + 1, 0).day;
-        firstDueDate = DateTime(loanStartDate.year, loanStartDate.month, lastDay < 30 ? lastDay : 30);
+        // Monthly payments on 30th (or last day of month)
+        // First payment should be 30th of NEXT month to give grace period
+        firstDueDate = DateTime(loanStartDate.year, loanStartDate.month + 1, 30);
+        // Adjust if next month has fewer than 30 days
+        final nextMonthLastDay = DateTime(firstDueDate.year, firstDueDate.month + 1, 0).day;
+        if (nextMonthLastDay < 30) {
+          firstDueDate = DateTime(firstDueDate.year, firstDueDate.month, nextMonthLastDay);
+        }
         // Add (installmentNum - 1) months
         final targetMonth = firstDueDate.month + (installmentNum - 1);
         final targetYear = firstDueDate.year + ((targetMonth - 1) ~/ 12);

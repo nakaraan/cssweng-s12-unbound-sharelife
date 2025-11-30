@@ -256,12 +256,6 @@ class _MemDBState extends State<AdminLoanPayRec> {
     DateTime loanStartDate,
     List<Map<String, dynamic>> allPaymentsForLoan,
   ) {
-    // If payment is already approved, paid, or completed, it's not overdue
-    final status = (payment['status'] ?? '').toString().toLowerCase();
-    if (status == 'approved' || status == 'paid' || status == 'completed') {
-      return false;
-    }
-
     final installmentNumber = payment['installment_number'];
     if (installmentNumber == null) return false;
 
@@ -281,9 +275,22 @@ class _MemDBState extends State<AdminLoanPayRec> {
     // Calculate the due date for this specific installment
     final dueDate = _calculateInstallmentDueDate(loanStartDate, installmentNum, repaymentTerm);
     
-    // Payment is overdue if current date is past the due date
-    final now = DateTime.now();
-    return now.isAfter(dueDate);
+    // Get payment date or use current date if payment hasn't been made yet
+    DateTime comparisonDate;
+    final paymentDateStr = payment['payment_date'];
+    if (paymentDateStr != null && paymentDateStr.toString().isNotEmpty) {
+      try {
+        comparisonDate = DateTime.parse(paymentDateStr.toString());
+      } catch (e) {
+        comparisonDate = DateTime.now();
+      }
+    } else {
+      // No payment date means payment not made yet, use current date
+      comparisonDate = DateTime.now();
+    }
+    
+    // Payment is overdue if the comparison date (payment date or current date) is after the due date
+    return comparisonDate.isAfter(dueDate);
   }
 
   // Calculate the due date for a specific installment number
@@ -296,15 +303,28 @@ class _MemDBState extends State<AdminLoanPayRec> {
     
     if (isBiMonthly) {
       // Bi-monthly: payments due on 15th and 30th of each month
-      if (startDay <= 15) {
+      if (startDay < 15) {
         // First payment due on 15th of current month
         firstDueDate = DateTime(loanStartDate.year, loanStartDate.month, 15);
-      } else if (startDay <= 30) {
+        // If first due date is today or in the past, or less than 7 days grace, move to 30th of same month
+        if (!firstDueDate.isAfter(loanStartDate) || firstDueDate.difference(loanStartDate).inDays < 7) {
+          final lastDay = DateTime(loanStartDate.year, loanStartDate.month + 1, 0).day;
+          firstDueDate = DateTime(loanStartDate.year, loanStartDate.month, lastDay < 30 ? lastDay : 30);
+          // If still less than 7 days, move to next cycle
+          if (firstDueDate.difference(loanStartDate).inDays < 7) {
+            firstDueDate = DateTime(loanStartDate.year, loanStartDate.month + 1, 15);
+          }
+        }
+      } else if (startDay < 30) {
         // First payment due on 30th of current month (or last day)
         final lastDay = DateTime(loanStartDate.year, loanStartDate.month + 1, 0).day;
         firstDueDate = DateTime(loanStartDate.year, loanStartDate.month, lastDay < 30 ? lastDay : 30);
+        // If first due date is today or in the past, or less than 7 days grace, move to 15th of next month
+        if (!firstDueDate.isAfter(loanStartDate) || firstDueDate.difference(loanStartDate).inDays < 7) {
+          firstDueDate = DateTime(loanStartDate.year, loanStartDate.month + 1, 15);
+        }
       } else {
-        // Started on 31st, first payment due on 15th of next month
+        // Started on 30th or 31st, first payment due on 15th of next month
         firstDueDate = DateTime(loanStartDate.year, loanStartDate.month + 1, 15);
       }
       
@@ -324,15 +344,27 @@ class _MemDBState extends State<AdminLoanPayRec> {
       return currentDue;
     } else {
       // Monthly: payment due on either 15th or 30th each month (not both)
-      if (startDay <= 15) {
+      if (startDay < 15) {
         // Monthly payments on 15th
         firstDueDate = DateTime(loanStartDate.year, loanStartDate.month, 15);
+        // If first due date is today or in the past, move to next month
+        if (!firstDueDate.isAfter(loanStartDate)) {
+          firstDueDate = DateTime(loanStartDate.year, loanStartDate.month + 1, 15);
+        }
         // Add (installmentNum - 1) months
-        return DateTime(firstDueDate.year, firstDueDate.month + (installmentNum - 1), 15);
+        final targetMonth = firstDueDate.month + (installmentNum - 1);
+        final targetYear = firstDueDate.year + ((targetMonth - 1) ~/ 12);
+        final adjustedMonth = ((targetMonth - 1) % 12) + 1;
+        return DateTime(targetYear, adjustedMonth, 15);
       } else {
-        // Monthly payments on 30th
-        final lastDay = DateTime(loanStartDate.year, loanStartDate.month + 1, 0).day;
-        firstDueDate = DateTime(loanStartDate.year, loanStartDate.month, lastDay < 30 ? lastDay : 30);
+        // Monthly payments on 30th (or last day of month)
+        // First payment should be 30th of NEXT month to give grace period
+        firstDueDate = DateTime(loanStartDate.year, loanStartDate.month + 1, 30);
+        // Adjust if next month has fewer than 30 days
+        final nextMonthLastDay = DateTime(firstDueDate.year, firstDueDate.month + 1, 0).day;
+        if (nextMonthLastDay < 30) {
+          firstDueDate = DateTime(firstDueDate.year, firstDueDate.month, nextMonthLastDay);
+        }
         // Add (installmentNum - 1) months
         final targetMonth = firstDueDate.month + (installmentNum - 1);
         final targetYear = firstDueDate.year + ((targetMonth - 1) ~/ 12);
@@ -904,6 +936,7 @@ class _MemDBState extends State<AdminLoanPayRec> {
                         columnSpacing: 58,
                         columns: [
                           DataColumn(label: Text("Payment ID", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "payment_id")),
+                          DataColumn(label: Text("Member Name", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "memName")),
                           DataColumn(label: Text("Loan ID", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "approved_loan_id")),
                           DataColumn(label: Text("Inst. No.", style: boldStyle), onSort: (i, asc) => onSort(i, asc, loans, "installment_number")),
                           DataColumn(label: Text("Amt.", style: boldStyle), numeric: true, onSort: (i, asc) => onSort(i, asc, loans, "amount")),
@@ -927,6 +960,7 @@ class _MemDBState extends State<AdminLoanPayRec> {
                             color: MaterialStateProperty.all(rowColor),
                             cells: [
                             DataCell(Text("${pay["payment_id"] ?? ""}")),
+                            DataCell(Text("${pay["memName"] ?? "-"}")),
                             DataCell(Text("${pay["approved_loan_id"] ?? ""}")),
                             DataCell(Text("${pay["installment_number"] ?? ""}")),
                             DataCell(Text(ExportService.safeCurrency(pay["amount"]))),
